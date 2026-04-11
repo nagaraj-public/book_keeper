@@ -487,7 +487,7 @@ def billing_generate():
             year=year,
             invoice_number=_next_invoice_number(month, year),
             amount=c.monthly_fee if c.monthly_fee is not None else def_fee,
-            btw_rate=c.default_btw_rate if c.default_btw_rate is not None else def_btw,
+            btw_rate=def_btw if def_btw is not None else 21.0,
         )
         db.session.add(billing)
         db.session.flush()
@@ -571,6 +571,29 @@ def billing_delete(billing_id):
     db.session.delete(b)
     db.session.commit()
     flash("Billing entry removed.", "success")
+    return redirect(url_for("main.billing_page", my=my))
+
+
+@bp.route("/billing/bulk-delete", methods=["POST"])
+def billing_bulk_delete():
+    ids = request.form.getlist("ids")
+    my = request.form.get("my", f"{date.today().month}-{date.today().year}")
+    if not ids:
+        flash("No entries selected.", "warning")
+        return redirect(url_for("main.billing_page", my=my))
+    deleted = 0
+    for bid in ids:
+        b = MonthlyBilling.query.get(int(bid))
+        if not b:
+            continue
+        if b.income_id:
+            inc = Income.query.get(b.income_id)
+            if inc:
+                db.session.delete(inc)
+        db.session.delete(b)
+        deleted += 1
+    db.session.commit()
+    flash(f"Deleted {deleted} billing entr{'y' if deleted == 1 else 'ies'}.", "success")
     return redirect(url_for("main.billing_page", my=my))
 
 

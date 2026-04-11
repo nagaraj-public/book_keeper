@@ -6,7 +6,21 @@
     <h1 class="page-title"><i class="bi bi-gear me-2"></i>Settings</h1>
 </div>
 
-<form method="POST" action="{{ url_for('main.settings_page') }}">
+<form method="POST" action="{{ url_for('main.settings_page') }}" id="settingsForm">
+
+    <!-- Sticky Save Bar -->
+    <div id="saveBar" style="
+        position:sticky; top:0; z-index:999;
+        background:#fff; border-bottom:1px solid #e2e8f0;
+        padding:.65rem 1rem; margin:-1rem -1rem .75rem -1rem;
+        display:flex; align-items:center; justify-content:space-between;
+        box-shadow:0 2px 8px rgba(0,0,0,.07);
+    ">
+        <span class="fw-semibold" style="color:#1e293b;"><i class="bi bi-gear me-2 text-primary"></i>Fee Defaults</span>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-floppy me-1"></i>Save Changes
+        </button>
+    </div>
     <div class="card mb-4">
         <div class="card-body">
             <h5 class="fw-bold mb-1"><i class="bi bi-currency-euro me-2 text-primary"></i>Default Fees by Student Type</h5>
@@ -35,9 +49,9 @@
                             <div class="col">
                                 <label class="form-label mb-1">BTW Rate (%)</label>
                                 <select name="adult_btw" class="form-select btw-select" data-type="adult">
-                                    <option value="21" {% if (d.adult_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
-                                    <option value="9"  {% if (d.adult_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
-                                    <option value="0"  {% if (d.adult_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                    <option value="21" {% if d.adult_btw is none or d.adult_btw == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if d.adult_btw == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if d.adult_btw == 0  %}selected{% endif %}>0%</option>
                                 </select>
                             </div>
                         </div>
@@ -66,9 +80,9 @@
                             <div class="col">
                                 <label class="form-label mb-1">BTW Rate (%)</label>
                                 <select name="child_btw" class="form-select btw-select" data-type="child">
-                                    <option value="21" {% if (d.child_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
-                                    <option value="9"  {% if (d.child_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
-                                    <option value="0"  {% if (d.child_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                    <option value="21" {% if d.child_btw is none or d.child_btw == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if d.child_btw == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if d.child_btw == 0  %}selected{% endif %}>0%</option>
                                 </select>
                             </div>
                         </div>
@@ -97,9 +111,9 @@
                             <div class="col">
                                 <label class="form-label mb-1">BTW Rate (%)</label>
                                 <select name="individual_btw" class="form-select btw-select" data-type="individual">
-                                    <option value="21" {% if (d.individual_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
-                                    <option value="9"  {% if (d.individual_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
-                                    <option value="0"  {% if (d.individual_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                    <option value="21" {% if d.individual_btw is none or d.individual_btw == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if d.individual_btw == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if d.individual_btw == 0  %}selected{% endif %}>0%</option>
                                 </select>
                             </div>
                         </div>
@@ -128,9 +142,9 @@
                             <div class="col">
                                 <label class="form-label mb-1">BTW Rate (%)</label>
                                 <select name="online_btw" class="form-select btw-select" data-type="online">
-                                    <option value="21" {% if (d.online_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
-                                    <option value="9"  {% if (d.online_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
-                                    <option value="0"  {% if (d.online_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                    <option value="21" {% if d.online_btw is none or d.online_btw == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if d.online_btw == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if d.online_btw == 0  %}selected{% endif %}>0%</option>
                                 </select>
                             </div>
                         </div>

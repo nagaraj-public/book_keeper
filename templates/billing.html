@@ -59,12 +59,28 @@
 </div>
 
 {% if billings %}
-<!-- Billing Table -->
+<!-- Bulk-delete form wraps the entire table -->
+<form method="POST" action="{{ url_for('main.billing_bulk_delete') }}" id="bulkForm">
+    <input type="hidden" name="my" value="{{ current_my }}">
+
+    <!-- Toolbar -->
+    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <input type="checkbox" id="selectAll" class="form-check-input" style="width:18px;height:18px;cursor:pointer;">
+            <label for="selectAll" class="text-muted small mb-0">Select all</label>
+            <span class="text-muted small" id="selCount" style="display:none;"></span>
+        </div>
+        <button type="submit" class="btn btn-danger btn-sm" id="deleteSelectedBtn" disabled
+                onclick="return confirm('Delete selected entries? Paid entries will also remove their income record.')">
+            <i class="bi bi-trash me-1"></i>Delete Selected
+        </button>
+    </div>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th style="width:36px;"></th>
                     <th>Student</th>
                     <th class="d-none d-md-table-cell">Type</th>
                     <th>Invoice #</th>
@@ -80,6 +96,10 @@
             {% set btw_amt = (b.amount * b.btw_rate / 100)|round(2) %}
             {% set total = (b.amount + btw_amt)|round(2) %}
             <tr>
+                <td>
+                    <input type="checkbox" name="ids" value="{{ b.id }}"
+                           class="form-check-input row-check" style="width:16px;height:16px;cursor:pointer;">
+                </td>
                 <td class="fw-bold">{{ b.client.name }}</td>
                 <td class="d-none d-md-table-cell">
                     {% if b.client.student_type == 'adult' %}
@@ -184,6 +204,7 @@
         </table>
     </div>
 </div>
+</form><!-- end bulkForm -->
 
 {% else %}
 <div class="card p-5 text-center">
@@ -197,7 +218,36 @@
 
 {% block scripts %}
 <script>
-    // Live BTW/Total preview inside each edit modal
+    // ---- Checkbox / bulk-delete logic ----
+    const selectAll   = document.getElementById('selectAll');
+    const deleteBtn   = document.getElementById('deleteSelectedBtn');
+    const selCount    = document.getElementById('selCount');
+
+    function updateToolbar() {
+        const checked = document.querySelectorAll('.row-check:checked');
+        const n = checked.length;
+        deleteBtn.disabled = n === 0;
+        if (n > 0) {
+            selCount.textContent = n + ' selected';
+            selCount.style.display = '';
+        } else {
+            selCount.style.display = 'none';
+        }
+        const total = document.querySelectorAll('.row-check').length;
+        selectAll.indeterminate = n > 0 && n < total;
+        selectAll.checked = n === total && total > 0;
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', () => {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = selectAll.checked);
+            updateToolbar();
+        });
+        document.querySelectorAll('.row-check').forEach(cb =>
+            cb.addEventListener('change', updateToolbar));
+    }
+
+    // ---- Live BTW/Total preview inside each edit modal ----
     document.querySelectorAll('.modal').forEach(modal => {
         const amountInput = modal.querySelector('.btw-calc-amount');
         const rateSelect = modal.querySelector('.btw-calc-rate');
