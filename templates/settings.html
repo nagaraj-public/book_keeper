@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="page-title"><i class="bi bi-gear me-2"></i>Settings</h1>
+</div>
+
+<form method="POST" action="{{ url_for('main.settings_page') }}">
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="fw-bold mb-1"><i class="bi bi-currency-euro me-2 text-primary"></i>Default Fees by Student Type</h5>
+            <p class="text-muted small mb-3">
+                These defaults are used when generating monthly billing for students who don't have a personal monthly fee set.
+                Students with a personal fee (set on the Students page) always use their own fee.
+            </p>
+
+            <div class="row g-3">
+                <!-- Adults -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge me-2" style="background:#dbeafe;color:#1d4ed8;font-size:.85em;padding:.4em .8em;">
+                                <i class="bi bi-person-standing me-1"></i>Adults
+                            </span>
+                            <span class="text-muted small">Intensive group classes</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label mb-1">Monthly Fee (&euro;)</label>
+                                <input name="adult_fee" type="number" step="0.01" min="0"
+                                       class="form-control fee-input" data-type="adult"
+                                       value="{{ '%.2f'|format(d.adult_fee or 0) }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <select name="adult_btw" class="form-select btw-select" data-type="adult">
+                                    <option value="21" {% if (d.adult_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if (d.adult_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if (d.adult_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Total incl. BTW: <strong class="total-preview" id="total-adult">&euro;0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kids -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge me-2" style="background:#fef3c7;color:#92400e;font-size:.85em;padding:.4em .8em;">
+                                <i class="bi bi-star me-1"></i>Kids
+                            </span>
+                            <span class="text-muted small">Children's classes</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label mb-1">Monthly Fee (&euro;)</label>
+                                <input name="child_fee" type="number" step="0.01" min="0"
+                                       class="form-control fee-input" data-type="child"
+                                       value="{{ '%.2f'|format(d.child_fee or 0) }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <select name="child_btw" class="form-select btw-select" data-type="child">
+                                    <option value="21" {% if (d.child_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if (d.child_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if (d.child_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Total incl. BTW: <strong class="total-preview" id="total-child">&euro;0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge me-2" style="background:#f3e8ff;color:#7c3aed;font-size:.85em;padding:.4em .8em;">
+                                <i class="bi bi-person-circle me-1"></i>Individual
+                            </span>
+                            <span class="text-muted small">Private lessons</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label mb-1">Monthly Fee (&euro;)</label>
+                                <input name="individual_fee" type="number" step="0.01" min="0"
+                                       class="form-control fee-input" data-type="individual"
+                                       value="{{ '%.2f'|format(d.individual_fee or 0) }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <select name="individual_btw" class="form-select btw-select" data-type="individual">
+                                    <option value="21" {% if (d.individual_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if (d.individual_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if (d.individual_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Total incl. BTW: <strong class="total-preview" id="total-individual">&euro;0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Online -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge me-2" style="background:#d1fae5;color:#065f46;font-size:.85em;padding:.4em .8em;">
+                                <i class="bi bi-camera-video me-1"></i>Online
+                            </span>
+                            <span class="text-muted small">Online group classes</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label mb-1">Monthly Fee (&euro;)</label>
+                                <input name="online_fee" type="number" step="0.01" min="0"
+                                       class="form-control fee-input" data-type="online"
+                                       value="{{ '%.2f'|format(d.online_fee or 0) }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <select name="online_btw" class="form-select btw-select" data-type="online">
+                                    <option value="21" {% if (d.online_btw or 21)|int == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if (d.online_btw or 21)|int == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if (d.online_btw or 21)|int == 0  %}selected{% endif %}>0%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Total incl. BTW: <strong class="total-preview" id="total-online">&euro;0.00</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer d-flex justify-content-end gap-2">
+            <a href="{{ url_for('main.billing_page') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-receipt me-1"></i>Go to Billing
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Save Defaults
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function recalc(type) {
+        const fee = parseFloat(document.querySelector(`.fee-input[data-type="${type}"]`).value) || 0;
+        const btw = parseFloat(document.querySelector(`.btw-select[data-type="${type}"]`).value) || 0;
+        const total = fee + Math.round(fee * btw) / 100;
+        document.getElementById(`total-${type}`).textContent = '€' + total.toFixed(2);
+    }
+
+    ['adult', 'child', 'individual', 'online'].forEach(type => {
+        document.querySelector(`.fee-input[data-type="${type}"]`).addEventListener('input', () => recalc(type));
+        document.querySelector(`.btw-select[data-type="${type}"]`).addEventListener('change', () => recalc(type));
+        recalc(type);
+    });
+</script>
+{% endblock %}

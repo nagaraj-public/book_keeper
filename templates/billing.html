@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Monthly Billing{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="page-title"><i class="bi bi-receipt me-2"></i>Monthly Billing</h1>
+</div>
+
+<!-- Month Selector + Generate -->
+<div class="card mb-3 p-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-1 fw-semibold">Select Month</label>
+            <select class="form-select" id="monthSelect" onchange="location.href='/billing?my='+this.value">
+                {% for m, y, label in months %}
+                <option value="{{ m }}-{{ y }}" {% if m == month and y == year %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <form method="POST" action="{{ url_for('main.billing_generate') }}">
+                <input type="hidden" name="my" value="{{ current_my }}">
+                <button type="submit" class="btn btn-primary"
+                        onclick="return confirm('Generate billing for {{ month_name }} {{ year }} for all active students?')">
+                    <i class="bi bi-lightning-charge me-1"></i>Generate for {{ month_name }} {{ year }}
+                </button>
+            </form>
+        </div>
+    </div>
+    <small class="text-muted mt-2 d-block">Creates one billing entry per active student using their monthly fee. Existing entries are skipped.</small>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-primary" style="font-size:1.4rem;">{{ billed_count }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Billed</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-success" style="font-size:1.4rem;">{{ paid_count }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Paid</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-warning" style="font-size:1.4rem;">{{ billed_count - paid_count }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Pending</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-success" style="font-size:1.4rem;">&euro;{{ "%.2f"|format(total_paid) }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">of &euro;{{ "%.2f"|format(total_expected) }}</div>
+        </div>
+    </div>
+</div>
+
+{% if billings %}
+<!-- Billing Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th class="d-none d-md-table-cell">Type</th>
+                    <th>Invoice #</th>
+                    <th class="text-end">Fee</th>
+                    <th class="d-none d-md-table-cell text-end">BTW</th>
+                    <th class="text-end">Total</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for b in billings %}
+            {% set btw_amt = (b.amount * b.btw_rate / 100)|round(2) %}
+            {% set total = (b.amount + btw_amt)|round(2) %}
+            <tr>
+                <td class="fw-bold">{{ b.client.name }}</td>
+                <td class="d-none d-md-table-cell">
+                    {% if b.client.student_type == 'adult' %}
+                        <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7em;">Adult</span>
+                    {% elif b.client.student_type == 'child' %}
+                        <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.7em;">Kids</span>
+                    {% elif b.client.student_type == 'individual' %}
+                        <span class="badge" style="background:#f3e8ff;color:#7c3aed;font-size:.7em;">Individual</span>
+                    {% elif b.client.student_type == 'online' %}
+                        <span class="badge" style="background:#d1fae5;color:#065f46;font-size:.7em;">Online</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted small font-monospace">{{ b.invoice_number }}</td>
+                <td class="text-end">&euro;{{ "%.2f"|format(b.amount) }}</td>
+                <td class="d-none d-md-table-cell text-end text-muted small">&euro;{{ "%.2f"|format(btw_amt) }}</td>
+                <td class="text-end fw-semibold">&euro;{{ "%.2f"|format(total) }}</td>
+                <td>
+                    {% if b.status == 'paid' %}
+                        <span class="badge bg-success" style="font-size:.75em;">
+                            <i class="bi bi-check-circle me-1"></i>Paid
+                        </span>
+                        {% if b.paid_date %}
+                        <div class="text-muted" style="font-size:.7em;">{{ b.paid_date.strftime('%d %b') }}</div>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-warning text-dark" style="font-size:.75em;">
+                            <i class="bi bi-hourglass-split me-1"></i>Unpaid
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="text-end" style="white-space:nowrap;">
+                    {% if b.status == 'unpaid' %}
+                    <form method="POST" action="{{ url_for('main.billing_mark_paid', billing_id=b.id) }}" class="d-inline">
+                        <button class="btn btn-sm btn-success" title="Mark as paid">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="POST" action="{{ url_for('main.billing_mark_unpaid', billing_id=b.id) }}" class="d-inline"
+                          onsubmit="return confirm('Undo payment for {{ b.client.name }}? This will remove the income entry.')">
+                        <button class="btn btn-sm btn-outline-warning" title="Undo payment">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                    <button class="btn btn-sm btn-outline-secondary" title="Edit"
+                            data-bs-toggle="modal" data-bs-target="#editBilling{{ b.id }}">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <form method="POST" action="{{ url_for('main.billing_delete', billing_id=b.id) }}" class="d-inline"
+                          onsubmit="return confirm('Delete billing entry for {{ b.client.name }}?')">
+                        <button class="btn btn-sm btn-outline-danger" title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+
+            <!-- Edit Modal -->
+            <div class="modal fade" id="editBilling{{ b.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Edit — {{ b.client.name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="POST" action="{{ url_for('main.billing_edit', billing_id=b.id) }}">
+                            <div class="modal-body">
+                                <div class="mb-2 text-muted small">{{ b.invoice_number }} &mdash; {{ month_name }} {{ year }}</div>
+                                <div class="row mb-3">
+                                    <div class="col">
+                                        <label class="form-label">Fee (&euro;)</label>
+                                        <input name="amount" type="number" step="0.01" min="0" class="form-control btw-calc-amount" value="{{ b.amount }}" required>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label">BTW Rate (%)</label>
+                                        <select name="btw_rate" class="form-select btw-calc-rate">
+                                            <option value="21" {% if b.btw_rate == 21 %}selected{% endif %}>21%</option>
+                                            <option value="9" {% if b.btw_rate == 9 %}selected{% endif %}>9%</option>
+                                            <option value="0" {% if b.btw_rate == 0 %}selected{% endif %}>0%</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="p-2 rounded mb-3" style="background:#f8fafc;">
+                                    BTW: <span class="btw-preview fw-bold">&euro;{{ "%.2f"|format(btw_amt) }}</span>
+                                    &nbsp;&nbsp;Total: <span class="total-preview fw-bold">&euro;{{ "%.2f"|format(total) }}</span>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Notes</label>
+                                    <input name="notes" class="form-control" value="{{ b.notes or '' }}" placeholder="Optional note">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="card p-5 text-center">
+    <i class="bi bi-receipt display-1 text-muted"></i>
+    <h4 class="mt-3 text-muted">No billing entries for {{ month_name }} {{ year }}</h4>
+    <p class="text-muted">Click <strong>Generate</strong> above to create billing entries for all active students.</p>
+    <p class="text-muted small">Make sure students have a <strong>Monthly Fee</strong> set under the Students page.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Live BTW/Total preview inside each edit modal
+    document.querySelectorAll('.modal').forEach(modal => {
+        const amountInput = modal.querySelector('.btw-calc-amount');
+        const rateSelect = modal.querySelector('.btw-calc-rate');
+        const btwPreview = modal.querySelector('.btw-preview');
+        const totalPreview = modal.querySelector('.total-preview');
+        if (!amountInput || !rateSelect) return;
+
+        function recalc() {
+            const amount = parseFloat(amountInput.value) || 0;
+            const rate = parseFloat(rateSelect.value) || 0;
+            const btw = Math.round(amount * rate) / 100;
+            const total = amount + btw;
+            if (btwPreview) btwPreview.textContent = '€' + btw.toFixed(2);
+            if (totalPreview) totalPreview.textContent = '€' + total.toFixed(2);
+        }
+        amountInput.addEventListener('input', recalc);
+        rateSelect.addEventListener('change', recalc);
+    });
+</script>
+{% endblock %}

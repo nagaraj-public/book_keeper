@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="page-title"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+    <form class="d-flex gap-2" method="GET">
+        <select name="month" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+            {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>
+                {{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}
+            </option>
+            {% endfor %}
+        </select>
+        <select name="year" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+            {% for y in range(2020, 2031) %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card income">
+            <div class="stat-label">Total Income</div>
+            <div class="stat-value">€ {{ "%.2f"|format(total_income) }}</div>
+            <small class="text-muted">BTW: € {{ "%.2f"|format(total_btw_income) }}</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card expense">
+            <div class="stat-label">Total Expenses</div>
+            <div class="stat-value">€ {{ "%.2f"|format(total_expenses) }}</div>
+            <small class="text-muted">BTW: € {{ "%.2f"|format(total_btw_expenses) }}</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card profit">
+            <div class="stat-label">Net Profit</div>
+            <div class="stat-value">€ {{ "%.2f"|format(profit) }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card hours">
+            <div class="stat-label">Hours Worked</div>
+            <div class="stat-value">{{ "%.1f"|format(total_hours) }}h</div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Income -->
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h5 class="mb-3"><i class="bi bi-arrow-up-circle text-success me-2"></i>Recent Income</h5>
+            {% if incomes %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Date</th><th>Description</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    {% for i in incomes[:8] %}
+                        <tr>
+                            <td>{{ i.date.strftime('%d %b') }}</td>
+                            <td>{{ i.description }}</td>
+                            <td class="text-end text-success fw-bold">€ {{ "%.2f"|format(i.total) }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No income entries this month.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-3">
+            <h5 class="mb-3"><i class="bi bi-arrow-down-circle text-danger me-2"></i>Recent Expenses</h5>
+            {% if expenses %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead><tr><th>Date</th><th>Description</th><th class="text-end">Total</th></tr></thead>
+                    <tbody>
+                    {% for e in expenses[:8] %}
+                        <tr>
+                            <td>{{ e.date.strftime('%d %b') }}</td>
+                            <td>{{ e.description }}</td>
+                            <td class="text-end text-danger fw-bold">€ {{ "%.2f"|format(e.total) }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted mb-0">No expense entries this month.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Hours -->
+{% if hours %}
+<div class="card p-3 mt-3">
+    <h5 class="mb-3"><i class="bi bi-clock text-purple me-2"></i>Hours This Month</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+            <thead><tr><th>Date</th><th>Client</th><th>Description</th><th class="text-end">Hours</th><th class="text-end">Earnings</th></tr></thead>
+            <tbody>
+            {% for h in hours[:8] %}
+                <tr>
+                    <td>{{ h.date.strftime('%d %b') }}</td>
+                    <td>{{ h.client.name if h.client else '-' }}</td>
+                    <td>{{ h.description }}</td>
+                    <td class="text-end">{{ "%.1f"|format(h.hours) }}</td>
+                    <td class="text-end fw-bold">€ {{ "%.2f"|format(h.hours * h.rate) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

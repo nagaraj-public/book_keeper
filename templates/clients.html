@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Students{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="page-title"><i class="bi bi-people me-2"></i>Students</h1>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#importModal">
+            <i class="bi bi-file-earmark-excel me-1"></i>Import Excel
+        </button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addClientModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Student
+        </button>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-success" style="font-size:1.4rem;">{{ counts.active }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Active</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-primary" style="font-size:1.4rem;">{{ counts.adults }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Adults</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold" style="font-size:1.4rem; color:#d97706;">{{ counts.kids }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Kids</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-2 text-center">
+            <div class="fw-bold text-danger" style="font-size:1.4rem;">{{ counts.discontinued }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Discontinued</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="card mb-3">
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <div class="d-flex" style="gap:2px; padding:6px; min-width:max-content;">
+            {% set tabs = [
+                ('all',          'All',           'bi-people-fill',      counts.all),
+                ('adults',       'Adults',        'bi-person-standing',  counts.adults),
+                ('kids',         'Kids',          'bi-star',             counts.kids),
+                ('individual',   'Individual',    'bi-person-circle',    counts.individual),
+                ('online',       'Online',        'bi-camera-video',     counts.online),
+                ('mode_offline', 'Offline',       'bi-house',            counts.mode_offline),
+                ('mode_online',  'Online Mode',   'bi-wifi',             counts.mode_online),
+                ('active',       'Active',        'bi-check-circle',     counts.active),
+                ('pending',      'Pending',       'bi-hourglass-split',  counts.pending),
+                ('discontinued', 'Ex-students',   'bi-x-circle',        counts.discontinued),
+            ] %}
+            {% for tid, tlabel, ticon, tcount in tabs %}
+            <a href="{{ url_for('main.clients_page', tab=tid) }}"
+               class="btn btn-sm {% if tab == tid %}btn-primary{% else %}btn-light border{% endif %} px-3">
+                <i class="bi {{ ticon }} me-1"></i>{{ tlabel }}
+                <span class="badge {% if tab == tid %}bg-white text-primary{% else %}bg-secondary{% endif %} ms-1">{{ tcount }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if clients %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th class="d-none d-lg-table-cell">Notes</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in clients %}
+                <tr>
+                    <td class="fw-bold">{{ c.name }}</td>
+                    <td>
+                        {% if c.student_type == 'adult' %}
+                            <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.75em;"><i class="bi bi-person-standing me-1"></i>Adult</span>
+                        {% elif c.student_type == 'child' %}
+                            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.75em;"><i class="bi bi-star me-1"></i>Kids</span>
+                        {% elif c.student_type == 'individual' %}
+                            <span class="badge" style="background:#f3e8ff;color:#7c3aed;font-size:.75em;"><i class="bi bi-person-circle me-1"></i>Individual</span>
+                        {% elif c.student_type == 'online' %}
+                            <span class="badge" style="background:#d1fae5;color:#065f46;font-size:.75em;"><i class="bi bi-camera-video me-1"></i>Online</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.delivery_mode == 'online' %}
+                            <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:.75em;"><i class="bi bi-wifi me-1"></i>Online</span>
+                        {% else %}
+                            <span class="badge" style="background:#f1f5f9;color:#475569;font-size:.75em;"><i class="bi bi-house me-1"></i>Offline</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.status == 'active' %}
+                            <span class="badge bg-success" style="font-size:.75em;"><i class="bi bi-check-circle me-1"></i>Active</span>
+                        {% elif c.status == 'pending' %}
+                            <span class="badge bg-warning text-dark" style="font-size:.75em;"><i class="bi bi-hourglass-split me-1"></i>Pending</span>
+                        {% elif c.status == 'discontinued' %}
+                            <span class="badge bg-danger" style="font-size:.75em;"><i class="bi bi-x-circle me-1"></i>Discontinued</span>
+                        {% endif %}
+                    </td>
+                    <td class="d-none d-lg-table-cell text-muted small" style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.notes or '-' }}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editClient{{ c.id }}">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <form method="POST" action="{{ url_for('main.delete_client', client_id=c.id) }}" class="d-inline"
+                              onsubmit="return confirm('Delete {{ c.name }}?')">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+
+                <!-- Edit Modal -->
+                <div class="modal fade" id="editClient{{ c.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Edit — {{ c.name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="POST" action="{{ url_for('main.edit_client', client_id=c.id) }}">
+                                <div class="modal-body">
+                                    <div class="mb-2"><label class="form-label">Name *</label><input name="name" class="form-control" value="{{ c.name }}" required></div>
+                                    <div class="row mb-2">
+                                        <div class="col">
+                                            <label class="form-label">Type</label>
+                                            <select name="student_type" class="form-select">
+                                                <option value="adult"      {% if c.student_type=='adult'      %}selected{% endif %}>Adult</option>
+                                                <option value="child"      {% if c.student_type=='child'      %}selected{% endif %}>Kids</option>
+                                                <option value="individual" {% if c.student_type=='individual' %}selected{% endif %}>Individual</option>
+                                                <option value="online"     {% if c.student_type=='online'     %}selected{% endif %}>Online</option>
+                                            </select>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">Status</label>
+                                            <select name="status" class="form-select">
+                                                <option value="active"       {% if c.status=='active'       %}selected{% endif %}>Active</option>
+                                                <option value="pending"      {% if c.status=='pending'      %}selected{% endif %}>Pending</option>
+                                                <option value="discontinued" {% if c.status=='discontinued' %}selected{% endif %}>Discontinued</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col"><label class="form-label">Email</label><input name="email" type="email" class="form-control" value="{{ c.email or '' }}"></div>
+                                        <div class="col"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ c.phone or '' }}"></div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col">
+                                            <label class="form-label">Mode</label>
+                                            <select name="delivery_mode" class="form-select">
+                                                <option value="offline" {% if (c.delivery_mode or 'offline') == 'offline' %}selected{% endif %}>Offline</option>
+                                                <option value="online" {% if c.delivery_mode == 'online' %}selected{% endif %}>Online</option>
+                                            </select>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">BTW Rate (%)</label>
+                                            <select name="default_btw_rate" class="form-select">
+                                                <option value="21" {% if (c.default_btw_rate or 21)|int == 21 %}selected{% endif %}>21%</option>
+                                                <option value="9" {% if c.default_btw_rate == 9 %}selected{% endif %}>9%</option>
+                                                <option value="0" {% if c.default_btw_rate == 0 %}selected{% endif %}>0%</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label">Monthly Fee (&euro;)</label>
+                                        <input name="monthly_fee" type="number" step="0.01" min="0" class="form-control" value="{{ c.monthly_fee or '' }}">
+                                    </div>
+                                    <div class="mb-2"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2">{{ c.notes or '' }}</textarea></div>
+                                </div>
+                                <div class="modal-footer"><button type="submit" class="btn btn-primary">Save Changes</button></div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card p-5 text-center">
+    <i class="bi bi-people display-1 text-muted"></i>
+    <h4 class="mt-3 text-muted">No students in this section</h4>
+    <p class="text-muted">Try a different tab or add a new student.</p>
+</div>
+{% endif %}
+
+<!-- Add Student Modal -->
+<div class="modal fade" id="addClientModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Add New Student</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" action="{{ url_for('main.add_client') }}">
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label">Name *</label><input name="name" class="form-control" required placeholder="Student name"></div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <label class="form-label">Type</label>
+                            <select name="student_type" class="form-select">
+                                <option value="adult">Adult</option>
+                                <option value="child">Kids</option>
+                                <option value="individual">Individual</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="active" selected>Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="discontinued">Discontinued</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col"><label class="form-label">Email</label><input name="email" type="email" class="form-control" placeholder="email@example.com"></div>
+                        <div class="col"><label class="form-label">Phone</label><input name="phone" class="form-control" placeholder="+31 6 ..."></div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <label class="form-label">Mode</label>
+                            <select name="delivery_mode" class="form-select">
+                                <option value="offline" selected>Offline</option>
+                                <option value="online">Online</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">BTW Rate (%)</label>
+                            <select name="default_btw_rate" class="form-select">
+                                <option value="21" selected>21%</option>
+                                <option value="9">9%</option>
+                                <option value="0">0%</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Monthly Fee (&euro;)</label>
+                        <input name="monthly_fee" type="number" step="0.01" min="0" class="form-control" placeholder="e.g. 60.00">
+                    </div>
+                    <div class="mb-2"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="2" placeholder="Class day, level, etc."></textarea></div>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Add Student</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Import Excel Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Import Students from Excel</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" action="{{ url_for('main.import_clients') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <p class="text-muted small">Upload an .xlsx file with columns: Name, Email, Phone. Dutch column names (Naam, etc.) also supported.</p>
+                    <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+                </div>
+                <div class="modal-footer"><button type="submit" class="btn btn-primary">Import</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block fab %}
+<button class="fab" data-bs-toggle="modal" data-bs-target="#addClientModal" aria-label="Add Student">
+    <i class="bi bi-plus-lg"></i>
+</button>
+{% endblock %}
