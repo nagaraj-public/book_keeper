@@ -138,6 +138,9 @@
                         </button>
                     </form>
                     {% else %}
+                    <a href="{{ url_for('main.billing_invoice', billing_id=b.id) }}" class="btn btn-sm btn-outline-primary" title="Download Invoice">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
                     <form method="POST" action="{{ url_for('main.billing_mark_unpaid', billing_id=b.id) }}" class="d-inline"
                           onsubmit="return confirm('Undo payment for {{ b.client.name }}? This will remove the income entry.')">
                         <button class="btn btn-sm btn-outline-warning" title="Undo payment">

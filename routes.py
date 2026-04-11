@@ -9,6 +9,7 @@ from flask import (
     url_for,
     flash,
     current_app,
+    send_file,
 )
 from werkzeug.utils import secure_filename
 from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults
@@ -595,6 +596,19 @@ def billing_bulk_delete():
     db.session.commit()
     flash(f"Deleted {deleted} billing entr{'y' if deleted == 1 else 'ies'}.", "success")
     return redirect(url_for("main.billing_page", my=my))
+
+
+@bp.route("/billing/<int:billing_id>/invoice")
+def billing_invoice(billing_id):
+    b = MonthlyBilling.query.get_or_404(billing_id)
+    if b.status != "paid":
+        flash("Invoice can only be downloaded for paid entries.", "warning")
+        return redirect(url_for("main.billing_page", my=f"{b.month}-{b.year}"))
+    from invoice_pdf import generate_invoice_pdf
+    pdf_buf = generate_invoice_pdf(b)
+    filename = f"Factuur_{b.invoice_number}_{b.client.name.replace(' ', '_')}.pdf"
+    return send_file(pdf_buf, mimetype="application/pdf",
+                     as_attachment=True, download_name=filename)
 
 
 # --------------- Fee Settings ---------------
