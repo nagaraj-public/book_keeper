@@ -164,6 +164,91 @@
             </button>
         </div>
     </div>
+
+    <!-- Venue Rent and Travel Expense -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="fw-bold mb-1"><i class="bi bi-geo-alt me-2 text-primary"></i>Venue Rent and Travel Expense</h5>
+            <p class="text-muted small mb-3">
+                Set rental costs per session and travel distances for venues where you conduct classes.
+            </p>
+
+            <div class="row g-3">
+                <!-- Gymzaal hof van Monaco -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card border p-3" style="border-radius:10px;background:#f8fafc;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span style="width:12px;height:12px;border-radius:50%;background:#3b82f6;display:inline-block;margin-right:8px;"></span>
+                            <span class="fw-semibold" style="font-size:0.9rem;">Gymzaal hof van Monaco</span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label mb-1 small">Rental Cost per Session (&euro;)</label>
+                            <input name="monaco_rent" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.2f'|format(d.monaco_rent or 0) }}">
+                        </div>
+                        <div>
+                            <label class="form-label mb-1 small">Distance from Home (km)</label>
+                            <input name="monaco_distance" type="number" step="0.1" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.1f'|format(d.monaco_distance or 0) }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gymzaal 't Vijfspan -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card border p-3" style="border-radius:10px;background:#f8fafc;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span style="width:12px;height:12px;border-radius:50%;background:#eab308;display:inline-block;margin-right:8px;"></span>
+                            <span class="fw-semibold" style="font-size:0.9rem;">Gymzaal 't Vijfspan</span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label mb-1 small">Rental Cost per Session (&euro;)</label>
+                            <input name="vijfspan_rent" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.2f'|format(d.vijfspan_rent or 0) }}">
+                        </div>
+                        <div>
+                            <label class="form-label mb-1 small">Distance from Home (km)</label>
+                            <input name="vijfspan_distance" type="number" step="0.1" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.1f'|format(d.vijfspan_distance or 0) }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Veenendaal Yoga -->
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card border p-3" style="border-radius:10px;background:#f8fafc;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span style="width:12px;height:12px;border-radius:50%;background:#d946ef;display:inline-block;margin-right:8px;"></span>
+                            <span class="fw-semibold" style="font-size:0.9rem;">Veenendaal Yoga</span>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label mb-1 small">Rental Cost per Session (&euro;)</label>
+                            <input name="veenendaal_rent" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.2f'|format(d.veenendaal_rent or 0) }}">
+                        </div>
+                        <div>
+                            <label class="form-label mb-1 small">Distance from Home (km)</label>
+                            <input name="veenendaal_distance" type="number" step="0.1" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.1f'|format(d.veenendaal_distance or 0) }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 mb-0" style="font-size:0.85rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Note:</strong> Rental costs and travel distances can be used for expense tracking and reporting.
+                Set these values to help calculate venue-related expenses automatically.
+            </div>
+        </div>
+    </div>
+
 </form>
 {% endblock %}
 

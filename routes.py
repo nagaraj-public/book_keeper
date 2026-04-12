@@ -53,6 +53,15 @@ def dashboard():
         db.extract("year",  ClassPlanner.date) == year,
         db.extract("month", ClassPlanner.date) == month,
     ).order_by(ClassPlanner.date).all()
+    
+    # Venue colors for planner widget
+    venue_colors = {
+        "Gymzaal hof van Monaco": "#3b82f6",  # blue
+        "Gymzaal 't Vijfspan": "#eab308",     # yellow
+        "Online": "#22c55e",                   # green
+        "Home": "#ef4444",                     # red
+        "Veenendaal Yoga": "#d946ef",         # magenta
+    }
 
     return render_template(
         "dashboard.html",
@@ -68,6 +77,7 @@ def dashboard():
         expenses=expenses,
         hours=hours,
         planned=planned,
+        venue_colors=venue_colors,
     )
 
 
@@ -727,6 +737,15 @@ def settings_page():
         defaults.individual_btw = float(request.form.get("individual_btw", defaults.individual_btw))
         defaults.online_fee     = float(request.form.get("online_fee",     defaults.online_fee))
         defaults.online_btw     = float(request.form.get("online_btw",     defaults.online_btw))
+        
+        # Venue rent and travel expense
+        defaults.monaco_rent       = float(request.form.get("monaco_rent",       defaults.monaco_rent or 0))
+        defaults.vijfspan_rent     = float(request.form.get("vijfspan_rent",     defaults.vijfspan_rent or 0))
+        defaults.veenendaal_rent   = float(request.form.get("veenendaal_rent",   defaults.veenendaal_rent or 0))
+        defaults.monaco_distance   = float(request.form.get("monaco_distance",   defaults.monaco_distance or 0))
+        defaults.vijfspan_distance = float(request.form.get("vijfspan_distance", defaults.vijfspan_distance or 0))
+        defaults.veenendaal_distance = float(request.form.get("veenendaal_distance", defaults.veenendaal_distance or 0))
+        
         db.session.commit()
         flash("Default fees saved.", "success")
         return redirect(url_for("main.settings_page"))
@@ -826,6 +845,21 @@ def planner_page():
 
     # set of planned day numbers for quick JS lookup
     planned_days = sorted({e.date.day for e in entries})
+    
+    # Map day -> list of unique venues for color-coding dots
+    from collections import defaultdict
+    day_venues = defaultdict(set)
+    for e in entries:
+        day_venues[e.date.day].add(e.venue)
+    
+    # Venue colors mapping
+    venue_colors = {
+        "Gymzaal hof van Monaco": "#3b82f6",  # blue
+        "Gymzaal 't Vijfspan": "#eab308",     # yellow
+        "Online": "#22c55e",                   # green
+        "Home": "#ef4444",                     # red
+        "Veenendaal Yoga": "#d946ef",         # magenta
+    }
 
     return render_template(
         "planner.html",
@@ -833,6 +867,8 @@ def planner_page():
         cal_matrix=cal_matrix,
         entries=entries,
         planned_days=planned_days,
+        day_venues=day_venues,
+        venue_colors=venue_colors,
         today=today,
     )
 

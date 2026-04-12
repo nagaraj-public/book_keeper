@@ -52,7 +52,11 @@
                          onclick="toggleDay(this)">
                         {{ day }}
                         {% if day in planned_days %}
-                        <span class="dot"></span>
+                        <div class="dots-container">
+                            {% for venue in day_venues[day]|sort %}
+                            <span class="dot" style="background: {{ venue_colors.get(venue, '#64748b') }};"></span>
+                            {% endfor %}
+                        </div>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -185,11 +189,16 @@
     .cal-day.selected {
         background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700;
     }
-    .cal-day.has-plans .dot {
+    .cal-day .dots-container {
         position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
-        width: 5px; height: 5px; border-radius: 50%; background: #2563eb;
+        display: flex; gap: 2px;
     }
-    .cal-day.selected .dot { background: #fff; }
+    .cal-day .dot {
+        width: 5px; height: 5px; border-radius: 50%;
+    }
+    .cal-day.selected .dot {
+        outline: 1px solid #fff;
+    }
 
     .planner-day-label {
         font-size: 0.82rem; color: #1e293b; padding: 4px 0 2px;

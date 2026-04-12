@@ -194,6 +194,14 @@ class FeeDefaults(db.Model):
     online_fee = db.Column(db.Float, default=40.0)
     online_btw = db.Column(db.Float, default=21.0)
 
+    # Venue rent and travel expense
+    monaco_rent = db.Column(db.Float, default=23.72)     # Gymzaal hof van Monaco rental cost per session
+    vijfspan_rent = db.Column(db.Float, default=19.25)   # Gymzaal 't Vijfspan rental cost per session
+    veenendaal_rent = db.Column(db.Float, default=0.0)   # Veenendaal Yoga rental cost per session
+    monaco_distance = db.Column(db.Float, default=41.8)  # Distance to Gymzaal hof van Monaco (km)
+    vijfspan_distance = db.Column(db.Float, default=40.5) # Distance to Gymzaal 't Vijfspan (km)
+    veenendaal_distance = db.Column(db.Float, default=3.0) # Distance to Veenendaal Yoga (km)
+
     @classmethod
     def get(cls):
         row = cls.query.first()
