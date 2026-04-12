@@ -746,6 +746,10 @@ def settings_page():
         defaults.vijfspan_distance = float(request.form.get("vijfspan_distance", defaults.vijfspan_distance or 0))
         defaults.veenendaal_distance = float(request.form.get("veenendaal_distance", defaults.veenendaal_distance or 0))
         
+        # Monthly expense rates
+        defaults.internet_cost = float(request.form.get("internet_cost", defaults.internet_cost or 0))
+        defaults.website_hosting_cost = float(request.form.get("website_hosting_cost", defaults.website_hosting_cost or 0))
+        
         db.session.commit()
         flash("Default fees saved.", "success")
         return redirect(url_for("main.settings_page"))
@@ -984,4 +988,120 @@ def planner_log_hours():
     if existing_log:
         msg += " Previous log updated."
     flash(msg, "success")
+    return redirect(url_for("main.planner_page", year=year, month=month))
+
+
+@bp.route("/planner/generate-expenses", methods=["POST"])
+def planner_generate_expenses():
+    """Generate monthly expenses from planner: venue rentals and utilities."""
+    year  = int(request.form.get("year",  date.today().year))
+    month = int(request.form.get("month", date.today().month))
+
+    # Get settings
+    defaults = FeeDefaults.get()
+    
+    # Get all planned classes for the month
+    entries = ClassPlanner.query.filter(
+        db.extract("year",  ClassPlanner.date) == year,
+        db.extract("month", ClassPlanner.date) == month,
+    ).all()
+
+    if not entries:
+        flash("No planned classes found for this month.", "warning")
+        return redirect(url_for("main.planner_page", year=year, month=month))
+
+    # Count classes by venue
+    from collections import Counter
+    venue_counts = Counter(e.venue for e in entries)
+    
+    # Get month name
+    import calendar as cal
+    month_name = cal.month_name[month]
+    
+    # Track expenses created
+    created = []
+    
+    # 1. Venue rental expenses
+    venue_rates = {
+        "Gymzaal hof van Monaco": defaults.monaco_rent,
+        "Gymzaal 't Vijfspan": defaults.vijfspan_rent,
+        "Veenendaal Yoga": defaults.veenendaal_rent,
+    }
+    
+    for venue, count in venue_counts.items():
+        if venue in venue_rates and venue_rates[venue] > 0:
+            total_cost = venue_rates[venue] * count
+            
+            # Check if this expense already exists (avoid duplicates)
+            existing = Expense.query.filter(
+                db.extract("year", Expense.date) == year,
+                db.extract("month", Expense.date) == month,
+                Expense.category == "Venue Rental",
+                Expense.description.like(f"%{venue}%")
+            ).first()
+            
+            if not existing:
+                expense = Expense(
+                    date=date(year, month, 1),
+                    amount=total_cost,
+                    btw_rate=0.0,
+                    btw_amount=0.0,
+                    total=total_cost,
+                    category="Venue Rental",
+                    description=f"{venue} - {count} session{'s' if count != 1 else ''} ({month_name} {year})",
+                )
+                db.session.add(expense)
+                created.append(f"Venue: {venue} (€{total_cost:.2f})")
+    
+    # 2. Internet expense (monthly)
+    if defaults.internet_cost > 0:
+        existing_internet = Expense.query.filter(
+            db.extract("year", Expense.date) == year,
+            db.extract("month", Expense.date) == month,
+            Expense.category == "Utilities",
+            Expense.description.like("%Internet%")
+        ).first()
+        
+        if not existing_internet:
+            expense = Expense(
+                date=date(year, month, 1),
+                amount=defaults.internet_cost,
+                btw_rate=0.0,
+                btw_amount=0.0,
+                total=defaults.internet_cost,
+                category="Utilities",
+                description=f"Internet - {month_name} {year}",
+            )
+            db.session.add(expense)
+            created.append(f"Internet (€{defaults.internet_cost:.2f})")
+    
+    # 3. Website hosting expense (monthly)
+    if defaults.website_hosting_cost > 0:
+        existing_hosting = Expense.query.filter(
+            db.extract("year", Expense.date) == year,
+            db.extract("month", Expense.date) == month,
+            Expense.category == "Utilities",
+            Expense.description.like("%Website%")
+        ).first()
+        
+        if not existing_hosting:
+            expense = Expense(
+                date=date(year, month, 1),
+                amount=defaults.website_hosting_cost,
+                btw_rate=0.0,
+                btw_amount=0.0,
+                total=defaults.website_hosting_cost,
+                category="Utilities",
+                description=f"Website Hosting - {month_name} {year}",
+            )
+            db.session.add(expense)
+            created.append(f"Website Hosting (€{defaults.website_hosting_cost:.2f})")
+    
+    db.session.commit()
+    
+    if created:
+        flash(f"Generated {len(created)} expense(s): {', '.join(created)}", "success")
+    else:
+        flash("No new expenses generated (all already exist for this month).", "info")
+    
     return redirect(url_for("main.planner_page", year=year, month=month))

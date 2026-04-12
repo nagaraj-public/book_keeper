@@ -202,6 +202,10 @@ class FeeDefaults(db.Model):
     vijfspan_distance = db.Column(db.Float, default=40.5) # Distance to Gymzaal 't Vijfspan (km)
     veenendaal_distance = db.Column(db.Float, default=3.0) # Distance to Veenendaal Yoga (km)
 
+    # Monthly expense rates
+    internet_cost = db.Column(db.Float, default=15.0)     # Monthly internet cost
+    website_hosting_cost = db.Column(db.Float, default=15.0) # Monthly website hosting cost
+
     @classmethod
     def get(cls):
         row = cls.query.first()

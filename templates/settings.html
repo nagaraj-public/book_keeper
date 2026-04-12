@@ -249,6 +249,55 @@
         </div>
     </div>
 
+    <!-- Monthly Expense Rates -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="fw-bold mb-1"><i class="bi bi-calculator me-2 text-primary"></i>Monthly Expense Rates</h5>
+            <p class="text-muted small mb-3">
+                Set default monthly rates for recurring expenses. These can be used for quick expense entry and budget tracking.
+            </p>
+
+            <div class="row g-3">
+                <!-- Internet -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;background:#f8fafc;">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-wifi text-primary me-2" style="font-size:1.2rem;"></i>
+                            <span class="fw-semibold" style="font-size:0.9rem;">Internet</span>
+                        </div>
+                        <div>
+                            <label class="form-label mb-1 small">Monthly Cost (&euro;)</label>
+                            <input name="internet_cost" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.2f'|format(d.internet_cost or 0) }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Website Hosting -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;background:#f8fafc;">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bi bi-globe text-primary me-2" style="font-size:1.2rem;"></i>
+                            <span class="fw-semibold" style="font-size:0.9rem;">Website Hosting</span>
+                        </div>
+                        <div>
+                            <label class="form-label mb-1 small">Monthly Cost (&euro;)</label>
+                            <input name="website_hosting_cost" type="number" step="0.01" min="0"
+                                   class="form-control form-control-sm"
+                                   value="{{ '%.2f'|format(d.website_hosting_cost or 0) }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-info mt-3 mb-0" style="font-size:0.85rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Note:</strong> These monthly expense rates can help you quickly add recurring expenses and track your budget over time.
+            </div>
+        </div>
+    </div>
+
 </form>
 {% endblock %}
 
