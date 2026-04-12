@@ -131,7 +131,7 @@
                     </td>
                     <td class="d-none d-lg-table-cell text-muted small" style="max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.notes or '-' }}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editClient{{ c.id }}">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editClient{{ c.id }}">
                             <i class="bi bi-pencil"></i>
                         </button>
                         <form method="POST" action="{{ url_for('main.delete_client', client_id=c.id) }}" class="d-inline"

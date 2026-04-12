@@ -56,7 +56,7 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editHours{{ h.id }}"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editHours{{ h.id }}"><i class="bi bi-pencil"></i></button>
                         <form method="POST" action="{{ url_for('main.delete_hours', entry_id=h.id) }}" class="d-inline"
                               onsubmit="return confirm('Delete this hours entry?')">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>

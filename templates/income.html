@@ -52,7 +52,7 @@
                     <td class="text-end text-muted">€ {{ "%.2f"|format(i.btw_amount) }} ({{ i.btw_rate|int }}%)</td>
                     <td class="text-end fw-bold text-success">€ {{ "%.2f"|format(i.total) }}</td>
                     <td class="text-end">
-                        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editIncome{{ i.id }}"><i class="bi bi-pencil"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editIncome{{ i.id }}"><i class="bi bi-pencil"></i></button>
                         <form method="POST" action="{{ url_for('main.delete_income', income_id=i.id) }}" class="d-inline"
                               onsubmit="return confirm('Delete this income entry?')">
                             <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>

@@ -32,19 +32,19 @@
 <!-- Summary Stats -->
 <div class="row g-2 mb-3">
     <div class="col-6 col-md-3">
-        <div class="card p-2 text-center">
+        <div class="card p-2 text-center status-filter-card" data-filter="all" style="cursor:pointer;transition:all 0.2s;" title="Click to show all">
             <div class="fw-bold text-primary" style="font-size:1.4rem;">{{ billed_count }}</div>
             <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Billed</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card p-2 text-center">
+        <div class="card p-2 text-center status-filter-card" data-filter="paid" style="cursor:pointer;transition:all 0.2s;" title="Click to filter paid">
             <div class="fw-bold text-success" style="font-size:1.4rem;">{{ paid_count }}</div>
             <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Paid</div>
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="card p-2 text-center">
+        <div class="card p-2 text-center status-filter-card" data-filter="unpaid" style="cursor:pointer;transition:all 0.2s;" title="Click to filter pending">
             <div class="fw-bold text-warning" style="font-size:1.4rem;">{{ billed_count - paid_count }}</div>
             <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Pending</div>
         </div>
@@ -106,7 +106,7 @@
             {% for b in billings %}
             {% set btw_amt = (b.amount * b.btw_rate / 100)|round(2) %}
             {% set total = (b.amount + btw_amt)|round(2) %}
-            <tr data-name="{{ b.client.name|lower }}">
+            <tr data-name="{{ b.client.name|lower }}" data-status="{{ b.status }}">
                 <td>
                     <input type="checkbox" name="ids" value="{{ b.id }}"
                            class="form-check-input row-check" style="width:16px;height:16px;cursor:pointer;">
@@ -159,7 +159,7 @@
                         </button>
                     </form>
                     {% endif %}
-                    <button class="btn btn-sm btn-outline-secondary" title="Edit"
+                    <button type="button" class="btn btn-sm btn-outline-secondary" title="Edit"
                             data-bs-toggle="modal" data-bs-target="#editBilling{{ b.id }}">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -281,6 +281,58 @@
         rateSelect.addEventListener('change', recalc);
     });
 
+    // ---- Status filter ----
+    let activeStatusFilter = 'all';
+    const statusCards = document.querySelectorAll('.status-filter-card');
+    
+    function applyFilters() {
+        const nameQuery = nameFilter ? nameFilter.value.trim().toLowerCase() : '';
+        const rows = document.querySelectorAll('tbody tr[data-name]');
+        let visible = 0;
+        
+        rows.forEach(row => {
+            const nameMatch = !nameQuery || row.dataset.name.startsWith(nameQuery);
+            const statusMatch = activeStatusFilter === 'all' || row.dataset.status === activeStatusFilter;
+            const match = nameMatch && statusMatch;
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        
+        // Update filter count
+        if (nameQuery || activeStatusFilter !== 'all') {
+            filterCount.textContent = `${visible} of ${rows.length} shown`;
+            filterCount.style.display = '';
+        } else {
+            filterCount.style.display = 'none';
+        }
+        
+        // Update card visual state
+        statusCards.forEach(card => {
+            if (card.dataset.filter === activeStatusFilter) {
+                card.style.transform = 'scale(1.05)';
+                card.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+            } else {
+                card.style.transform = '';
+                card.style.boxShadow = '';
+            }
+        });
+        
+        updateToolbar();
+    }
+    
+    statusCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+            // Toggle: if clicking active filter, reset to 'all'
+            if (activeStatusFilter === filter && filter !== 'all') {
+                activeStatusFilter = 'all';
+            } else {
+                activeStatusFilter = filter;
+            }
+            applyFilters();
+        });
+    });
+
     // ---- Name filter ----
     const nameFilter  = document.getElementById('nameFilter');
     const clearFilter = document.getElementById('clearFilter');
@@ -290,21 +342,7 @@
         nameFilter.addEventListener('input', function () {
             const q = this.value.trim().toLowerCase();
             clearFilter.style.display = q ? '' : 'none';
-            const rows = document.querySelectorAll('tbody tr[data-name]');
-            let visible = 0;
-            rows.forEach(row => {
-                const match = !q || row.dataset.name.startsWith(q);
-                row.style.display = match ? '' : 'none';
-                if (match) visible++;
-            });
-            if (q) {
-                filterCount.textContent = `${visible} of ${rows.length} shown`;
-                filterCount.style.display = '';
-            } else {
-                filterCount.style.display = 'none';
-            }
-            // reset select-all state after filter
-            updateToolbar();
+            applyFilters();
         });
 
         clearFilter.addEventListener('click', function () {
