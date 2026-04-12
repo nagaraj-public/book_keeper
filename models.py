@@ -201,6 +201,7 @@ class FeeDefaults(db.Model):
     monaco_distance = db.Column(db.Float, default=41.8)  # Distance to Gymzaal hof van Monaco (km)
     vijfspan_distance = db.Column(db.Float, default=40.5) # Distance to Gymzaal 't Vijfspan (km)
     veenendaal_distance = db.Column(db.Float, default=3.0) # Distance to Veenendaal Yoga (km)
+    travel_allowance = db.Column(db.Float, default=0.23)  # Travel allowance per km (euros)
 
     # Monthly expense rates
     internet_cost = db.Column(db.Float, default=15.0)     # Monthly internet cost

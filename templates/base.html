@@ -44,7 +44,9 @@
         .sidebar .brand {
             padding: 0.5rem 1.25rem 1.5rem;
             font-size: 1.3rem; font-weight: 700; color: var(--primary);
+            display: flex; align-items: center; gap: 0.5rem;
         }
+        .sidebar .brand img { height: 70px; width: auto; object-fit: contain; }
         .sidebar .brand i { margin-right: 0.4rem; }
         .sidebar .nav-link {
             color: var(--sidebar-text); padding: 0.75rem 1.25rem;
@@ -74,7 +76,8 @@
             align-items: center; justify-content: space-between;
             padding-top: var(--safe-top);
         }
-        .topbar .brand { font-weight: 700; color: var(--primary); font-size: 1.1rem; }
+        .topbar .brand { font-weight: 700; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.4rem; }
+        .topbar .brand img { height: 50px; width: auto; object-fit: contain; }
         .topbar .brand i { margin-right: 0.3rem; }
         .topbar-menu-btn {
             background: none; border: none; color: #fff; font-size: 1.4rem;
@@ -174,7 +177,7 @@
         <button class="topbar-menu-btn" onclick="toggleSidebar()" aria-label="Menu">
             <i class="bi bi-list"></i>
         </button>
-        <div class="brand"><i class="bi bi-journal-bookmark-fill"></i>NATYANJANI</div>
+        <div class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="Natyanjani Logo"></div>
         <div style="width:40px;"></div>
     </div>
 
@@ -184,7 +187,7 @@
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
         <button class="sidebar-close" onclick="closeSidebar()" aria-label="Close menu"><i class="bi bi-x-lg"></i></button>
-        <div class="brand"><i class="bi bi-journal-bookmark-fill"></i><span>NATYANJANI</span></div>
+        <div class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="Natyanjani Logo"></div>
         <ul class="nav flex-column">
             <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">

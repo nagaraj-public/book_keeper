@@ -1,12 +1,13 @@
 """Generate invoice PDFs matching the Natyanjani invoice template."""
 
 import io
+import os
 from datetime import date
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.colors import HexColor
 from reportlab.platypus import (
-    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
@@ -82,11 +83,17 @@ def generate_invoice_pdf(billing_entry):
     inv_date = b.paid_date or date.today()
     month_name = MONTH_NAMES_NL.get(b.month, str(b.month))
 
-    # ---- Header: Business info (right-aligned block) ----
+    # ---- Header: Logo + Business info ----
+    # Get logo path
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
+    logo_img = None
+    if os.path.exists(logo_path):
+        logo_img = Image(logo_path, width=50 * mm, height=50 * mm, kind='proportional')
+    
     biz_info = Table(
         [
             [
-                "",
+                logo_img if logo_img else "",
                 Paragraph(f"<b>{BUSINESS_NAME}</b>", ParagraphStyle(
                     "biz", parent=styles["Normal"], fontSize=14,
                     textColor=HexColor("#1a1a2e"), alignment=TA_RIGHT,

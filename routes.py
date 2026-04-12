@@ -745,6 +745,7 @@ def settings_page():
         defaults.monaco_distance   = float(request.form.get("monaco_distance",   defaults.monaco_distance or 0))
         defaults.vijfspan_distance = float(request.form.get("vijfspan_distance", defaults.vijfspan_distance or 0))
         defaults.veenendaal_distance = float(request.form.get("veenendaal_distance", defaults.veenendaal_distance or 0))
+        defaults.travel_allowance  = float(request.form.get("travel_allowance",  defaults.travel_allowance or 0.23))
         
         # Monthly expense rates
         defaults.internet_cost = float(request.form.get("internet_cost", defaults.internet_cost or 0))
@@ -993,7 +994,7 @@ def planner_log_hours():
 
 @bp.route("/planner/generate-expenses", methods=["POST"])
 def planner_generate_expenses():
-    """Generate monthly expenses from planner: venue rentals and utilities."""
+    """Generate monthly expenses from planner: venue rentals, travel, and utilities."""
     year  = int(request.form.get("year",  date.today().year))
     month = int(request.form.get("month", date.today().month))
 
@@ -1053,7 +1054,41 @@ def planner_generate_expenses():
                 db.session.add(expense)
                 created.append(f"Venue: {venue} (€{total_cost:.2f})")
     
-    # 2. Internet expense (monthly)
+    # 2. Travel expenses (based on distance and travel allowance)
+    venue_distances = {
+        "Gymzaal hof van Monaco": defaults.monaco_distance,
+        "Gymzaal 't Vijfspan": defaults.vijfspan_distance,
+        "Veenendaal Yoga": defaults.veenendaal_distance,
+    }
+    
+    for venue, count in venue_counts.items():
+        if venue in venue_distances and venue_distances[venue] > 0 and defaults.travel_allowance > 0:
+            # Calculate round trip travel cost: distance × 2 (round trip) × count × rate per km
+            distance = venue_distances[venue]
+            travel_cost = round(distance * 2 * count * defaults.travel_allowance, 2)
+            
+            # Check if this expense already exists (avoid duplicates)
+            existing = Expense.query.filter(
+                db.extract("year", Expense.date) == year,
+                db.extract("month", Expense.date) == month,
+                Expense.category == "Travel",
+                Expense.description.like(f"%{venue}%")
+            ).first()
+            
+            if not existing:
+                expense = Expense(
+                    date=date(year, month, 1),
+                    amount=travel_cost,
+                    btw_rate=0.0,
+                    btw_amount=0.0,
+                    total=travel_cost,
+                    category="Travel",
+                    description=f"Travel to {venue} - {count} session{'s' if count != 1 else ''}, {distance:.1f}km × 2 ({month_name} {year})",
+                )
+                db.session.add(expense)
+                created.append(f"Travel: {venue} (€{travel_cost:.2f})")
+    
+    # 3. Internet expense (monthly)
     if defaults.internet_cost > 0:
         existing_internet = Expense.query.filter(
             db.extract("year", Expense.date) == year,
@@ -1075,7 +1110,7 @@ def planner_generate_expenses():
             db.session.add(expense)
             created.append(f"Internet (€{defaults.internet_cost:.2f})")
     
-    # 3. Website hosting expense (monthly)
+    # 4. Website hosting expense (monthly)
     if defaults.website_hosting_cost > 0:
         existing_hosting = Expense.query.filter(
             db.extract("year", Expense.date) == year,
