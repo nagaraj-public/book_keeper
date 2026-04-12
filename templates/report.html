@@ -22,23 +22,23 @@
 <div class="row g-3 mb-4">
     <div class="col-md-3">
         <div class="card stat-card income">
-            <div class="stat-label">Total Income (incl. BTW)</div>
-            <div class="stat-value">€ {{ "%.2f"|format(report.total_income) }}</div>
-            <small class="text-muted">Excl. BTW: € {{ "%.2f"|format(report.total_income_excl) }}</small>
+            <div class="stat-label">Total Income (incl. VAT)</div>
+            <div class="stat-value">&euro; {{ "%.2f"|format(report.total_income) }}</div>
+            <small class="text-muted">Excl. VAT: &euro; {{ "%.2f"|format(report.total_income_excl) }}</small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card expense">
-            <div class="stat-label">Total Expenses (incl. BTW)</div>
-            <div class="stat-value">€ {{ "%.2f"|format(report.total_expenses) }}</div>
-            <small class="text-muted">Excl. BTW: € {{ "%.2f"|format(report.total_expenses_excl) }}</small>
+            <div class="stat-label">Total Expenses (incl. VAT)</div>
+            <div class="stat-value">&euro; {{ "%.2f"|format(report.total_expenses) }}</div>
+            <small class="text-muted">Excl. VAT: &euro; {{ "%.2f"|format(report.total_expenses_excl) }}</small>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card stat-card profit">
             <div class="stat-label">Net Profit</div>
             <div class="stat-value">€ {{ "%.2f"|format(report.profit_excl) }}</div>
-            <small class="text-muted">Taxable income (excl. BTW)</small>
+            <small class="text-muted">Taxable income (excl. VAT)</small>
         </div>
     </div>
     <div class="col-md-3">
@@ -49,15 +49,15 @@
     </div>
 </div>
 
-<!-- BTW Summary (for tax filing) -->
+<!-- VAT Summary (for tax filing) -->
 <div class="card p-4 mb-4">
-    <h5 class="mb-3"><i class="bi bi-bank me-2"></i>BTW Summary (for Belastingdienst)</h5>
+    <h5 class="mb-3"><i class="bi bi-bank me-2"></i>VAT Summary (for Belastingdienst)</h5>
     <div class="row">
         <div class="col-md-4">
             <table class="table table-sm">
-                <tr><td class="text-muted">BTW collected (income)</td><td class="text-end fw-bold">€ {{ "%.2f"|format(report.total_btw_income) }}</td></tr>
-                <tr><td class="text-muted">BTW paid (expenses)</td><td class="text-end fw-bold">€ {{ "%.2f"|format(report.total_btw_expenses) }}</td></tr>
-                <tr class="table-warning"><td class="fw-bold">BTW to pay / reclaim</td><td class="text-end fw-bold">€ {{ "%.2f"|format(report.btw_to_pay) }}</td></tr>
+                <tr><td class="text-muted">VAT collected (income)</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.total_btw_income) }}</td></tr>
+                <tr><td class="text-muted">VAT paid (expenses)</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.total_btw_expenses) }}</td></tr>
+                <tr class="table-warning"><td class="fw-bold">VAT to pay / reclaim</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.btw_to_pay) }}</td></tr>
             </table>
         </div>
     </div>
@@ -72,10 +72,10 @@
                 <tr>
                     <th>Month</th>
                     <th class="text-end">Income (excl.)</th>
-                    <th class="text-end">BTW Income</th>
+                    <th class="text-end">VAT Income</th>
                     <th class="text-end">Expenses (excl.)</th>
-                    <th class="text-end">BTW Expenses</th>
-                    <th class="text-end">Net BTW</th>
+                    <th class="text-end">VAT Expenses</th>
+                    <th class="text-end">Net VAT</th>
                     <th class="text-end">Profit (excl.)</th>
                     <th class="text-end">Hours</th>
                 </tr>
@@ -187,7 +187,7 @@
 <div class="card p-4 mb-4 border-start border-4 border-warning">
     <h5 class="mb-3"><i class="bi bi-info-circle text-warning me-2"></i>Tax Filing Notes (Netherlands)</h5>
     <ul class="mb-0 small">
-        <li><strong>Profit (excl. BTW):</strong> € {{ "%.2f"|format(report.profit_excl) }} — This is your taxable business income for inkomstenbelasting.</li>
+        <li><strong>Profit (excl. VAT):</strong> € {{ "%.2f"|format(report.profit_excl) }} — This is your taxable business income for inkomstenbelasting.</li>
         <li><strong>BTW to pay:</strong> € {{ "%.2f"|format(report.btw_to_pay) }} — File quarterly or annually with the Belastingdienst.</li>
         <li><strong>Zelfstandigenaftrek:</strong> If you worked 1,225+ hours (you logged {{ "%.0f"|format(report.total_hours) }}h), you may qualify for the zelfstandigenaftrek.</li>
         <li><strong>Startersaftrek:</strong> Additional deduction if you are in your first 3 years of business.</li>

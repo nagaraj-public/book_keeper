@@ -152,6 +152,20 @@ class MonthlyBilling(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+class MonthlyHoursLog(db.Model):
+    """One record per generated month, storing how many classes were taught."""
+    __tablename__ = "monthly_hours_log"
+
+    id = db.Column(db.Integer, primary_key=True)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    group_classes = db.Column(db.Integer, default=0)
+    individual_classes = db.Column(db.Integer, default=0)
+    other_hours = db.Column(db.Float, default=0.0)
+    total_hours = db.Column(db.Float, default=0.0)
+    hour_entry_id = db.Column(db.Integer, nullable=True)  # ref to hours.id
+
+
 class FeeDefaults(db.Model):
     """Single-row table holding default fee + BTW per student type."""
     __tablename__ = "fee_defaults"

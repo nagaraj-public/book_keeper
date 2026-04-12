@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from werkzeug.utils import secure_filename
-from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults
+from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog
 from excel_import import import_clients_from_excel
 
 bp = Blueprint("main", __name__)
@@ -186,6 +186,24 @@ def delete_client(client_id):
     return redirect(url_for("main.clients_page"))
 
 
+@bp.route("/clients/bulk-delete", methods=["POST"])
+def bulk_delete_clients():
+    ids = request.form.getlist("ids")
+    tab = request.form.get("tab", "all")
+    if not ids:
+        flash("No students selected.", "warning")
+        return redirect(url_for("main.clients_page", tab=tab))
+    deleted = 0
+    for cid in ids:
+        c = Client.query.get(int(cid))
+        if c:
+            db.session.delete(c)
+            deleted += 1
+    db.session.commit()
+    flash(f"Deleted {deleted} student{'s' if deleted != 1 else ''}.", "success")
+    return redirect(url_for("main.clients_page", tab=tab))
+
+
 @bp.route("/clients/import", methods=["POST"])
 def import_clients():
     if "file" not in request.files:
@@ -279,6 +297,23 @@ def delete_income(income_id):
     return redirect(url_for("main.income_page"))
 
 
+@bp.route("/income/bulk-delete", methods=["POST"])
+def bulk_delete_income():
+    ids = request.form.getlist("ids")
+    if not ids:
+        flash("No entries selected.", "warning")
+        return redirect(url_for("main.income_page"))
+    deleted = 0
+    for iid in ids:
+        inc = Income.query.get(int(iid))
+        if inc:
+            db.session.delete(inc)
+            deleted += 1
+    db.session.commit()
+    flash(f"Deleted {deleted} income entr{'y' if deleted == 1 else 'ies'}.", "success")
+    return redirect(url_for("main.income_page"))
+
+
 # --------------- Expense CRUD ---------------
 
 @bp.route("/expenses/add", methods=["POST"])
@@ -341,6 +376,23 @@ def delete_expense(expense_id):
     return redirect(url_for("main.expenses_page"))
 
 
+@bp.route("/expenses/bulk-delete", methods=["POST"])
+def bulk_delete_expenses():
+    ids = request.form.getlist("ids")
+    if not ids:
+        flash("No entries selected.", "warning")
+        return redirect(url_for("main.expenses_page"))
+    deleted = 0
+    for eid in ids:
+        exp = Expense.query.get(int(eid))
+        if exp:
+            db.session.delete(exp)
+            deleted += 1
+    db.session.commit()
+    flash(f"Deleted {deleted} expense entr{'y' if deleted == 1 else 'ies'}.", "success")
+    return redirect(url_for("main.expenses_page"))
+
+
 # --------------- Hours CRUD ---------------
 
 @bp.route("/hours/add", methods=["POST"])
@@ -385,6 +437,23 @@ def delete_hours(entry_id):
     db.session.delete(entry)
     db.session.commit()
     flash("Hours entry deleted.", "success")
+    return redirect(url_for("main.hours_page"))
+
+
+@bp.route("/hours/bulk-delete", methods=["POST"])
+def bulk_delete_hours():
+    ids = request.form.getlist("ids")
+    if not ids:
+        flash("No entries selected.", "warning")
+        return redirect(url_for("main.hours_page"))
+    deleted = 0
+    for hid in ids:
+        h = HourEntry.query.get(int(hid))
+        if h:
+            db.session.delete(h)
+            deleted += 1
+    db.session.commit()
+    flash(f"Deleted {deleted} hours entr{'y' if deleted == 1 else 'ies'}.", "success")
     return redirect(url_for("main.hours_page"))
 
 
@@ -498,6 +567,48 @@ def billing_generate():
     msg = f"Generated {created} billing entries for {_MONTH_NAMES.get(month, '')} {year}."
     if skipped:
         msg += f" ({skipped} already existed)"
+
+    # ---- Log teaching hours (only if billing was created and not already logged) ----
+    if created > 0 and not MonthlyHoursLog.query.filter_by(month=month, year=year).first():
+        try:
+            group_classes      = int(request.form.get("group_classes", 0) or 0)
+            individual_classes = int(request.form.get("individual_classes", 0) or 0)
+            other_hours        = float(request.form.get("other_hours", 0) or 0)
+        except ValueError:
+            group_classes = individual_classes = 0
+            other_hours = 0.0
+
+        total_hours = group_classes * 4 + individual_classes * 3 + other_hours
+        if total_hours > 0:
+            import calendar
+            last_day = calendar.monthrange(year, month)[1]
+            entry = HourEntry(
+                client_id=None,
+                date=date(year, month, last_day),
+                hours=total_hours,
+                rate=0.0,
+                description=(
+                    f"Teaching \u2014 {_MONTH_NAMES.get(month, '')} {year} "
+                    f"({group_classes} group class{'es' if group_classes != 1 else ''}, "
+                    f"{individual_classes} individual class{'es' if individual_classes != 1 else ''}, "
+                    f"{other_hours:.1f}h other)"
+                ),
+                invoiced=True,
+            )
+            db.session.add(entry)
+            db.session.flush()
+            log = MonthlyHoursLog(
+                month=month, year=year,
+                group_classes=group_classes,
+                individual_classes=individual_classes,
+                other_hours=other_hours,
+                total_hours=total_hours,
+                hour_entry_id=entry.id,
+            )
+            db.session.add(log)
+            db.session.commit()
+            msg += f" Hours logged: {total_hours:.1f}h."
+
     flash(msg, "success")
     return redirect(url_for("main.billing_page", my=my))
 
@@ -565,11 +676,22 @@ def billing_edit(billing_id):
 def billing_delete(billing_id):
     b = MonthlyBilling.query.get_or_404(billing_id)
     my = f"{b.month}-{b.year}"
+    bmonth, byear = b.month, b.year
     if b.income_id:
         inc = Income.query.get(b.income_id)
         if inc:
             db.session.delete(inc)
     db.session.delete(b)
+    db.session.flush()
+    # If no billing entries remain for this month, remove the hours log
+    if MonthlyBilling.query.filter_by(month=bmonth, year=byear).count() == 0:
+        log = MonthlyHoursLog.query.filter_by(month=bmonth, year=byear).first()
+        if log:
+            if log.hour_entry_id:
+                he = HourEntry.query.get(log.hour_entry_id)
+                if he:
+                    db.session.delete(he)
+            db.session.delete(log)
     db.session.commit()
     flash("Billing entry removed.", "success")
     return redirect(url_for("main.billing_page", my=my))
@@ -583,16 +705,29 @@ def billing_bulk_delete():
         flash("No entries selected.", "warning")
         return redirect(url_for("main.billing_page", my=my))
     deleted = 0
+    affected_months = set()
     for bid in ids:
         b = MonthlyBilling.query.get(int(bid))
         if not b:
             continue
+        affected_months.add((b.month, b.year))
         if b.income_id:
             inc = Income.query.get(b.income_id)
             if inc:
                 db.session.delete(inc)
         db.session.delete(b)
         deleted += 1
+    db.session.flush()
+    # Remove hours logs for months that now have no billing entries
+    for (bmonth, byear) in affected_months:
+        if MonthlyBilling.query.filter_by(month=bmonth, year=byear).count() == 0:
+            log = MonthlyHoursLog.query.filter_by(month=bmonth, year=byear).first()
+            if log:
+                if log.hour_entry_id:
+                    he = HourEntry.query.get(log.hour_entry_id)
+                    if he:
+                        db.session.delete(he)
+                db.session.delete(log)
     db.session.commit()
     flash(f"Deleted {deleted} billing entr{'y' if deleted == 1 else 'ies'}.", "success")
     return redirect(url_for("main.billing_page", my=my))

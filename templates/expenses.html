@@ -10,17 +10,30 @@
 </div>
 
 {% if expenses %}
+<form method="POST" action="{{ url_for('main.bulk_delete_expenses') }}" id="bulkForm">
+    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <input type="checkbox" id="selectAll" class="form-check-input" style="width:18px;height:18px;cursor:pointer;">
+            <label for="selectAll" class="text-muted small mb-0">Select all</label>
+            <span class="text-muted small" id="selCount" style="display:none;"></span>
+        </div>
+        <button type="submit" class="btn btn-danger btn-sm" id="deleteSelectedBtn" disabled
+                onclick="return confirm('Delete selected expense entries?')">
+            <i class="bi bi-trash me-1"></i>Delete Selected
+        </button>
+    </div>
 <div class="card">
     <div class="table-responsive">
         <table class="table table-hover mb-0">
             <thead>
                 <tr>
+                    <th style="width:36px;"></th>
                     <th>Date</th>
                     <th>Receipt</th>
                     <th>Description</th>
                     <th>Category</th>
                     <th class="text-end">Amount</th>
-                    <th class="text-end">BTW</th>
+                    <th class="text-end">VAT</th>
                     <th class="text-end">Total</th>
                     <th class="text-end">Actions</th>
                 </tr>
@@ -28,6 +41,7 @@
             <tbody>
             {% for e in expenses %}
                 <tr>
+                    <td><input type="checkbox" name="ids" value="{{ e.id }}" class="form-check-input row-check" style="width:16px;height:16px;cursor:pointer;"></td>
                     <td>{{ e.date.strftime('%d-%m-%Y') }}</td>
                     <td><code>{{ e.receipt_ref or '-' }}</code></td>
                     <td>{{ e.description }}</td>
@@ -57,9 +71,9 @@
                                     </div>
                                     <div class="mb-2"><label class="form-label">Description</label><input name="description" class="form-control" value="{{ e.description }}" required></div>
                                     <div class="row mb-2">
-                                        <div class="col"><label class="form-label">Amount (excl. BTW)</label><input name="amount" type="number" step="0.01" class="form-control" value="{{ e.amount }}" required></div>
+                                        <div class="col"><label class="form-label">Amount (excl. VAT)</label><input name="amount" type="number" step="0.01" class="form-control" value="{{ e.amount }}" required></div>
                                         <div class="col">
-                                            <label class="form-label">BTW Rate</label>
+                                            <label class="form-label">VAT Rate</label>
                                             <select name="btw_rate" class="form-select">
                                                 <option value="21" {% if e.btw_rate == 21 %}selected{% endif %}>21%</option>
                                                 <option value="9" {% if e.btw_rate == 9 %}selected{% endif %}>9%</option>
@@ -68,7 +82,7 @@
                                         </div>
                                     </div>
                                     <div class="row mb-2">
-                                        <div class="col"><span class="text-muted">BTW: </span><strong class="btw-display">€ {{ "%.2f"|format(e.btw_amount) }}</strong></div>
+                                        <div class="col"><span class="text-muted">VAT: </span><strong class="btw-display">€ {{ "%.2f"|format(e.btw_amount) }}</strong></div>
                                         <div class="col"><span class="text-muted">Total: </span><strong class="total-display">€ {{ "%.2f"|format(e.total) }}</strong></div>
                                     </div>
                                     <div class="mb-2">
@@ -90,6 +104,7 @@
         </table>
     </div>
 </div>
+</form><!-- end bulkForm -->
 {% else %}
 <div class="card p-5 text-center">
     <i class="bi bi-graph-down-arrow display-1 text-muted"></i>
@@ -97,6 +112,26 @@
     <p class="text-muted">Keep track of your business expenses for accurate tax filing.</p>
 </div>
 {% endif %}
+
+{% block scripts %}
+<script>
+    (function() {
+        const selectAll = document.getElementById('selectAll');
+        const deleteBtn = document.getElementById('deleteSelectedBtn');
+        const selCount  = document.getElementById('selCount');
+        function updateToolbar() {
+            const checked = document.querySelectorAll('.row-check:checked');
+            const n = checked.length;
+            if (deleteBtn) deleteBtn.disabled = n === 0;
+            if (selCount) { selCount.textContent = n > 0 ? n + ' selected' : ''; selCount.style.display = n > 0 ? '' : 'none'; }
+            const total = document.querySelectorAll('.row-check').length;
+            if (selectAll) { selectAll.indeterminate = n > 0 && n < total; selectAll.checked = total > 0 && n === total; }
+        }
+        if (selectAll) { selectAll.addEventListener('change', () => { document.querySelectorAll('.row-check').forEach(cb => cb.checked = selectAll.checked); updateToolbar(); }); }
+        document.querySelectorAll('.row-check').forEach(cb => cb.addEventListener('change', updateToolbar));
+    })();
+</script>
+{% endblock %}
 
 {% block fab %}
 <button class="fab" data-bs-toggle="modal" data-bs-target="#addExpenseModal" aria-label="Add Expense">
@@ -117,9 +152,9 @@
                     </div>
                     <div class="mb-2"><label class="form-label">Description *</label><input name="description" class="form-control" required placeholder="What was this expense for?"></div>
                     <div class="row mb-2">
-                        <div class="col"><label class="form-label">Amount (excl. BTW) *</label><input name="amount" type="number" step="0.01" min="0" class="form-control" required placeholder="0.00"></div>
+                        <div class="col"><label class="form-label">Amount (excl. VAT) *</label><input name="amount" type="number" step="0.01" min="0" class="form-control" required placeholder="0.00"></div>
                         <div class="col">
-                            <label class="form-label">BTW Rate</label>
+                            <label class="form-label">VAT Rate</label>
                             <select name="btw_rate" class="form-select">
                                 <option value="21" selected>21% (standard)</option>
                                 <option value="9">9% (low)</option>
@@ -128,7 +163,7 @@
                         </div>
                     </div>
                     <div class="row mb-2">
-                        <div class="col"><span class="text-muted">BTW: </span><strong class="btw-display">€ 0.00</strong></div>
+                        <div class="col"><span class="text-muted">VAT: </span><strong class="btw-display">€ 0.00</strong></div>
                         <div class="col"><span class="text-muted">Total: </span><strong class="total-display">€ 0.00</strong></div>
                     </div>
                     <div class="mb-2">

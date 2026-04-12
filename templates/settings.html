@@ -47,7 +47,7 @@
                                        value="{{ '%.2f'|format(d.adult_fee or 0) }}" required>
                             </div>
                             <div class="col">
-                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <label class="form-label mb-1">VAT Rate (%)</label>
                                 <select name="adult_btw" class="form-select btw-select" data-type="adult">
                                     <option value="21" {% if d.adult_btw is none or d.adult_btw == 21 %}selected{% endif %}>21%</option>
                                     <option value="9"  {% if d.adult_btw == 9  %}selected{% endif %}>9%</option>
@@ -56,7 +56,7 @@
                             </div>
                         </div>
                         <div class="mt-2 text-muted small">
-                            Total incl. BTW: <strong class="total-preview" id="total-adult">&euro;0.00</strong>
+                            Total incl. VAT: <strong class="total-preview" id="total-adult">&euro;0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -78,7 +78,7 @@
                                        value="{{ '%.2f'|format(d.child_fee or 0) }}" required>
                             </div>
                             <div class="col">
-                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <label class="form-label mb-1">VAT Rate (%)</label>
                                 <select name="child_btw" class="form-select btw-select" data-type="child">
                                     <option value="21" {% if d.child_btw is none or d.child_btw == 21 %}selected{% endif %}>21%</option>
                                     <option value="9"  {% if d.child_btw == 9  %}selected{% endif %}>9%</option>
@@ -87,7 +87,7 @@
                             </div>
                         </div>
                         <div class="mt-2 text-muted small">
-                            Total incl. BTW: <strong class="total-preview" id="total-child">&euro;0.00</strong>
+                            Total incl. VAT: <strong class="total-preview" id="total-child">&euro;0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -109,7 +109,7 @@
                                        value="{{ '%.2f'|format(d.individual_fee or 0) }}" required>
                             </div>
                             <div class="col">
-                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <label class="form-label mb-1">VAT Rate (%)</label>
                                 <select name="individual_btw" class="form-select btw-select" data-type="individual">
                                     <option value="21" {% if d.individual_btw is none or d.individual_btw == 21 %}selected{% endif %}>21%</option>
                                     <option value="9"  {% if d.individual_btw == 9  %}selected{% endif %}>9%</option>
@@ -118,7 +118,7 @@
                             </div>
                         </div>
                         <div class="mt-2 text-muted small">
-                            Total incl. BTW: <strong class="total-preview" id="total-individual">&euro;0.00</strong>
+                            Total incl. VAT: <strong class="total-preview" id="total-individual">&euro;0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -140,7 +140,7 @@
                                        value="{{ '%.2f'|format(d.online_fee or 0) }}" required>
                             </div>
                             <div class="col">
-                                <label class="form-label mb-1">BTW Rate (%)</label>
+                                <label class="form-label mb-1">VAT Rate (%)</label>
                                 <select name="online_btw" class="form-select btw-select" data-type="online">
                                     <option value="21" {% if d.online_btw is none or d.online_btw == 21 %}selected{% endif %}>21%</option>
                                     <option value="9"  {% if d.online_btw == 9  %}selected{% endif %}>9%</option>
@@ -149,7 +149,7 @@
                             </div>
                         </div>
                         <div class="mt-2 text-muted small">
-                            Total incl. BTW: <strong class="total-preview" id="total-online">&euro;0.00</strong>
+                            Total incl. VAT: <strong class="total-preview" id="total-online">&euro;0.00</strong>
                         </div>
                     </div>
                 </div>
