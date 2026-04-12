@@ -179,6 +179,8 @@
                                         <div class="col"><label class="form-label">Email</label><input name="email" type="email" class="form-control" value="{{ c.email or '' }}"></div>
                                         <div class="col"><label class="form-label">Phone</label><input name="phone" class="form-control" value="{{ c.phone or '' }}"></div>
                                     </div>
+                                    <div class="mb-2"><label class="form-label">Address Line 1</label><input name="address_line1" class="form-control" value="{{ c.address_line1 or '' }}" placeholder="Street and number"></div>
+                                    <div class="mb-2"><label class="form-label">Address Line 2</label><input name="address_line2" class="form-control" value="{{ c.address_line2 or '' }}" placeholder="City, postal code"></div>
                                     <div class="row mb-2">
                                         <div class="col">
                                             <label class="form-label">Mode</label>
@@ -253,6 +255,8 @@
                         <div class="col"><label class="form-label">Email</label><input name="email" type="email" class="form-control" placeholder="email@example.com"></div>
                         <div class="col"><label class="form-label">Phone</label><input name="phone" class="form-control" placeholder="+31 6 ..."></div>
                     </div>
+                    <div class="mb-2"><label class="form-label">Address Line 1</label><input name="address_line1" class="form-control" placeholder="Street and number"></div>
+                    <div class="mb-2"><label class="form-label">Address Line 2</label><input name="address_line2" class="form-control" placeholder="City, postal code"></div>
                     <div class="row mb-2">
                         <div class="col">
                             <label class="form-label">Mode</label>

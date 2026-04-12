@@ -14,7 +14,9 @@ class Client(db.Model):
     btw_number = db.Column(db.String(20))
     email = db.Column(db.String(200))
     phone = db.Column(db.String(30))
-    address = db.Column(db.Text)
+    address = db.Column(db.Text)  # Legacy field
+    address_line1 = db.Column(db.String(200))
+    address_line2 = db.Column(db.String(200))
     notes = db.Column(db.Text)
     # adult | child | individual | online
     student_type = db.Column(db.String(20), default="adult")
@@ -149,6 +151,22 @@ class MonthlyBilling(db.Model):
     paid_date = db.Column(db.Date, nullable=True)
     income_id = db.Column(db.Integer, nullable=True)  # ref to incomes.id
     notes = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship to line items
+    line_items = db.relationship("BillingLineItem", backref="billing", cascade="all, delete-orphan", lazy=True)
+
+
+class BillingLineItem(db.Model):
+    """Individual fee line items for a billing entry"""
+    __tablename__ = "billing_line_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    billing_id = db.Column(db.Integer, db.ForeignKey("monthly_billing.id"), nullable=False)
+    service = db.Column(db.String(200))  # Optional service description
+    amount = db.Column(db.Float, nullable=False, default=0.0)
+    btw_rate = db.Column(db.Float, default=21.0)
+    line_date = db.Column(db.Date, nullable=True)  # Date for this specific line item
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 

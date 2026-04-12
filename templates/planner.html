@@ -147,12 +147,21 @@
                         <div class="text-muted" style="font-size:0.8rem;">{{ e.description }}</div>
                         {% endif %}
                     </div>
-                    <form method="POST" action="{{ url_for('main.planner_delete', entry_id=e.id) }}"
-                          onsubmit="return confirm('Remove this planned class?')">
-                        <button type="submit" class="btn btn-link text-danger p-0" style="font-size:0.85rem;" title="Delete">
-                            <i class="bi bi-trash"></i>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-link text-primary p-0 edit-plan-btn" style="font-size:0.85rem;" title="Edit"
+                                data-id="{{ e.id }}"
+                                data-venue="{{ e.venue }}"
+                                data-class-type="{{ e.class_type }}"
+                                data-description="{{ e.description or '' }}">
+                            <i class="bi bi-pencil"></i>
                         </button>
-                    </form>
+                        <form method="POST" action="{{ url_for('main.planner_delete', entry_id=e.id) }}"
+                              onsubmit="return confirm('Remove this planned class?')">
+                            <button type="submit" class="btn btn-link text-danger p-0" style="font-size:0.85rem;" title="Delete">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
 
             {% if loop.last %}</div>{% endif %}
@@ -165,6 +174,48 @@
                 <small>Select dates on the calendar and add a class.</small>
             </div>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" id="editForm">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Planned Class</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Venue</label>
+                        <select name="venue" id="editVenue" class="form-select">
+                            <option value="Gymzaal hof van Monaco">Gymzaal hof van Monaco</option>
+                            <option value="Gymzaal 't Vijfspan">Gymzaal 't Vijfspan</option>
+                            <option value="Online">Online</option>
+                            <option value="Home">Home</option>
+                            <option value="Veenendaal Yoga">Veenendaal Yoga</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Class Type</label>
+                        <select name="class_type" id="editClassType" class="form-select">
+                            <option value="group">Group</option>
+                            <option value="individual">Individual</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description <span class="text-muted fw-normal">(optional)</span></label>
+                        <textarea name="description" id="editDescription" class="form-control" rows="2" placeholder="Notes, venue, topics…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -218,6 +269,31 @@
 
 <script>
     const selectedDates = new Set();
+    let editModal;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        
+        // Handle edit button clicks using event delegation
+        document.addEventListener('click', function(e) {
+            const editBtn = e.target.closest('.edit-plan-btn');
+            if (editBtn) {
+                const id = editBtn.dataset.id;
+                const venue = editBtn.dataset.venue;
+                const classType = editBtn.dataset.classType;
+                const description = editBtn.dataset.description;
+                openEditModal(id, venue, classType, description);
+            }
+        });
+    });
+
+    function openEditModal(id, venue, classType, description) {
+        document.getElementById('editForm').action = '{{ url_for("main.planner_edit", entry_id=0) }}'.replace('/0/', '/' + id + '/');
+        document.getElementById('editVenue').value = venue;
+        document.getElementById('editClassType').value = classType;
+        document.getElementById('editDescription').value = description || '';
+        editModal.show();
+    }
 
     function toggleDay(el) {
         const d = el.dataset.date;

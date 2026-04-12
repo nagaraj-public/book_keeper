@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from werkzeug.utils import secure_filename
-from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog, ClassPlanner, CostumeCharge, CostumePurchase
+from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, BillingLineItem, FeeDefaults, MonthlyHoursLog, ClassPlanner, CostumeCharge, CostumePurchase
 from excel_import import import_clients_from_excel
 
 bp = Blueprint("main", __name__)
@@ -149,6 +149,11 @@ def report_page():
 
 @bp.route("/clients/add", methods=["POST"])
 def add_client():
+    address_line1 = request.form.get("address_line1", "").strip()
+    address_line2 = request.form.get("address_line2", "").strip()
+    # Combine for legacy address field
+    combined_address = "\n".join(filter(None, [address_line1, address_line2]))
+    
     client = Client(
         name=request.form.get("name", "").strip(),
         company_name=request.form.get("company_name", "").strip(),
@@ -156,7 +161,9 @@ def add_client():
         btw_number=request.form.get("btw_number", "").strip(),
         email=request.form.get("email", "").strip(),
         phone=request.form.get("phone", "").strip(),
-        address=request.form.get("address", "").strip(),
+        address=combined_address,
+        address_line1=address_line1,
+        address_line2=address_line2,
         notes=request.form.get("notes", "").strip(),
         student_type=request.form.get("student_type", "adult"),
         status=request.form.get("status", "active"),
@@ -176,13 +183,20 @@ def add_client():
 @bp.route("/clients/edit/<int:client_id>", methods=["POST"])
 def edit_client(client_id):
     client = Client.query.get_or_404(client_id)
+    address_line1 = request.form.get("address_line1", "").strip()
+    address_line2 = request.form.get("address_line2", "").strip()
+    # Combine for legacy address field
+    combined_address = "\n".join(filter(None, [address_line1, address_line2]))
+    
     client.name = request.form.get("name", client.name).strip()
     client.company_name = request.form.get("company_name", "").strip()
     client.kvk_number = request.form.get("kvk_number", "").strip()
     client.btw_number = request.form.get("btw_number", "").strip()
     client.email = request.form.get("email", "").strip()
     client.phone = request.form.get("phone", "").strip()
-    client.address = request.form.get("address", "").strip()
+    client.address = combined_address
+    client.address_line1 = address_line1
+    client.address_line2 = address_line2
     client.notes = request.form.get("notes", "").strip()
     client.student_type = request.form.get("student_type", client.student_type)
     client.status = request.form.get("status", client.status)
@@ -507,7 +521,7 @@ def _billing_months():
 
 def _next_invoice_number(month, year):
     count = MonthlyBilling.query.filter_by(month=month, year=year).count()
-    return f"NAT-{year}-{month:02d}-{count + 1:03d}"
+    return f"NATYANJANI-{year}-{month:02d}-{count + 1:03d}"
 
 
 @bp.route("/billing")
@@ -642,8 +656,49 @@ def billing_mark_unpaid(billing_id):
 @bp.route("/billing/<int:billing_id>/edit", methods=["POST"])
 def billing_edit(billing_id):
     b = MonthlyBilling.query.get_or_404(billing_id)
-    b.amount = float(request.form.get("amount", b.amount))
-    b.btw_rate = float(request.form.get("btw_rate", b.btw_rate))
+    
+    # Handle line items if provided
+    services = request.form.getlist("service[]")
+    amounts = request.form.getlist("line_amount[]")
+    btw_rates = request.form.getlist("line_btw_rate[]")
+    line_dates = request.form.getlist("line_date[]")
+    
+    if services and amounts:  # If line items present, use them
+        # Delete existing line items
+        BillingLineItem.query.filter_by(billing_id=b.id).delete()
+        db.session.flush()  # Ensure deletions are processed
+        
+        # Add new line items and calculate total
+        total_amount = 0.0
+        for i, (service, amount, rate) in enumerate(zip(services, amounts, btw_rates)):
+            if amount.strip():  # Only add if amount is provided
+                line_amt = float(amount)
+                line_date_str = line_dates[i] if i < len(line_dates) else None
+                line_date_obj = None
+                if line_date_str and line_date_str.strip():
+                    try:
+                        line_date_obj = datetime.strptime(line_date_str, "%Y-%m-%d").date()
+                    except:
+                        pass
+                
+                line_item = BillingLineItem(
+                    billing_id=b.id,
+                    service=service.strip() if service.strip() else None,
+                    amount=line_amt,
+                    btw_rate=float(rate),
+                    line_date=line_date_obj
+                )
+                db.session.add(line_item)
+                total_amount += line_amt
+        
+        # Update billing total (use first line item's VAT rate or keep existing)
+        b.amount = total_amount
+        if btw_rates:
+            b.btw_rate = float(btw_rates[0])
+    else:  # Fallback to single amount (legacy mode)
+        b.amount = float(request.form.get("amount", b.amount))
+        b.btw_rate = float(request.form.get("btw_rate", b.btw_rate))
+    
     b.notes = request.form.get("notes", b.notes or "").strip()
     db.session.commit()
     flash(f"Updated billing for {b.client.name}.", "success")
@@ -924,6 +979,18 @@ def planner_delete(entry_id):
     db.session.delete(entry)
     db.session.commit()
     flash("Planned class removed.", "success")
+    return redirect(url_for("main.planner_page", year=year, month=month))
+
+
+@bp.route("/planner/<int:entry_id>/edit", methods=["POST"])
+def planner_edit(entry_id):
+    entry = ClassPlanner.query.get_or_404(entry_id)
+    entry.venue = request.form.get("venue", "").strip()
+    entry.class_type = request.form.get("class_type", "group").strip()
+    entry.description = request.form.get("description", "").strip()
+    db.session.commit()
+    flash("Planned class updated.", "success")
+    year, month = entry.date.year, entry.date.month
     return redirect(url_for("main.planner_page", year=year, month=month))
 
 

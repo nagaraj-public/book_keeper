@@ -78,71 +78,90 @@ def generate_invoice_pdf(billing_entry):
     elements = []
     b = billing_entry
     client = b.client
-    btw_amt = round(b.amount * b.btw_rate / 100, 2)
-    total = round(b.amount + btw_amt, 2)
     inv_date = b.paid_date or date.today()
     month_name = MONTH_NAMES_NL.get(b.month, str(b.month))
 
-    # ---- Header: Logo + Business info ----
-    # Get logo path
+    # Pre-calculate totals
+    if b.line_items:
+        subtotal = round(sum(item.amount for item in b.line_items), 2)
+        btw_amt = round(sum(item.amount * item.btw_rate / 100 for item in b.line_items), 2)
+    else:
+        subtotal = b.amount
+        btw_amt = round(b.amount * b.btw_rate / 100, 2)
+    total = round(subtotal + btw_amt, 2)
+
+    # ---- Header: Factuurdatum (left) | Factuur Nummer (centre) | Natyanjani+logo+info (right) ----
     logo_path = os.path.join(os.path.dirname(__file__), 'static', 'logo.png')
     logo_img = None
     if os.path.exists(logo_path):
-        logo_img = Image(logo_path, width=50 * mm, height=50 * mm, kind='proportional')
-    
-    biz_info = Table(
+        logo_img = Image(logo_path, width=35 * mm, height=35 * mm, kind='proportional')
+
+    label_style = ParagraphStyle(
+        "lbl", parent=styles["Normal"], fontSize=8,
+        textColor=HexColor("#888888"),
+    )
+    biz_name_style = ParagraphStyle(
+        "bizname", parent=styles["Normal"], fontSize=14,
+        textColor=HexColor("#1a1a2e"), alignment=TA_RIGHT,
+    )
+    biz_addr_style = ParagraphStyle(
+        "bizaddr", parent=styles["Normal"], fontSize=9,
+        textColor=HexColor("#666666"), alignment=TA_RIGHT, leading=13,
+    )
+    centre_style = ParagraphStyle(
+        "ctr", parent=styles["Normal"], fontSize=8,
+        textColor=HexColor("#888888"), alignment=TA_CENTER,
+    )
+    centre_val_style = ParagraphStyle(
+        "ctrval", parent=styles["Normal"], fontSize=10,
+        textColor=HexColor("#1a1a2e"), alignment=TA_CENTER,
+    )
+
+    header_table = Table(
         [
+            # Row 1: label (left) | label (centre) | Natyanjani (right)
             [
-                logo_img if logo_img else "",
-                Paragraph(f"<b>{BUSINESS_NAME}</b>", ParagraphStyle(
-                    "biz", parent=styles["Normal"], fontSize=14,
-                    textColor=HexColor("#1a1a2e"), alignment=TA_RIGHT,
-                )),
+                Paragraph("Factuurdatum", label_style),
+                Paragraph("Factuur Nummer", centre_style),
+                Paragraph(f"<b>{BUSINESS_NAME}</b>", biz_name_style),
             ],
+            # Row 2: date value | invoice number | Logo
             [
+                Paragraph(f"<b>{inv_date.strftime('%d-%b-%Y')}</b>", value_style),
+                Paragraph(f"<b>{b.invoice_number}</b>", centre_val_style),
+                logo_img if logo_img else "",
+            ],
+            # Row 3: empty | empty | address/kvk/email
+            [
+                "",
                 "",
                 Paragraph(
                     f"{BUSINESS_ADDRESS}<br/>{BUSINESS_KVK}<br/>{BUSINESS_EMAIL}",
-                    ParagraphStyle("bizd", parent=styles["Normal"], fontSize=9,
-                                   textColor=HexColor("#666666"), alignment=TA_RIGHT, leading=13),
+                    biz_addr_style,
                 ),
             ],
         ],
-        colWidths=["50%", "50%"],
+        colWidths=["30%", "30%", "40%"],
     )
-    biz_info.setStyle(TableStyle([
+    header_table.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 4),
+        ("TOPPADDING", (0, 1), (-1, 1), 2),
+        ("BOTTOMPADDING", (0, 1), (-1, 1), 4),
     ]))
-    elements.append(biz_info)
+    elements.append(header_table)
     elements.append(Spacer(1, 8 * mm))
-
-    # ---- Invoice date + number row ----
-    meta_data = [
-        [
-            Paragraph("<font color='#888888' size='8'>Factuurdatum</font>", styles["Normal"]),
-            Paragraph("<font color='#888888' size='8'>Factuur Nummer</font>", styles["Normal"]),
-        ],
-        [
-            Paragraph(f"<b>{inv_date.strftime('%d-%b-%Y')}</b>", value_style),
-            Paragraph(f"<b>{b.invoice_number}</b>", value_style),
-        ],
-    ]
-    meta_table = Table(meta_data, colWidths=["50%", "50%"])
-    meta_table.setStyle(TableStyle([
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
-        ("TOPPADDING", (0, 1), (-1, 1), 1),
-    ]))
-    elements.append(meta_table)
-    elements.append(Spacer(1, 6 * mm))
 
     # ---- Client address block ----
     elements.append(Paragraph("<font color='#888888' size='8'>Factuur Adres,</font>", styles["Normal"]))
     elements.append(Spacer(1, 1 * mm))
 
     client_addr = client.name
-    if client.address:
-        client_addr += f"<br/>{client.address}"
+    if client.address_line1:
+        client_addr += f"<br/>{client.address_line1}"
+    if client.address_line2:
+        client_addr += f"<br/>{client.address_line2}"
     if client.email:
         client_addr += f"<br/>{client.email}"
     if client.phone:
@@ -161,8 +180,7 @@ def generate_invoice_pdf(billing_entry):
         "individual": "Dance Classes - Individual",
         "online": "Dance Classes - Online",
     }
-    service_desc = category_map.get(client.student_type, "Dance Classes")
-
+    
     table_data = [
         [
             Paragraph("<b>SERVICE</b>", ParagraphStyle("th", fontSize=9, textColor=accent)),
@@ -170,21 +188,51 @@ def generate_invoice_pdf(billing_entry):
             Paragraph("<b>BEDRAG</b>", ParagraphStyle("th", fontSize=9, textColor=accent, alignment=TA_RIGHT)),
             Paragraph("<b>TOTAAL</b>", ParagraphStyle("th", fontSize=9, textColor=accent, alignment=TA_RIGHT)),
         ],
-        [
+    ]
+    
+    # Use line items if available, otherwise use single billing amount
+    if b.line_items:
+        for item in b.line_items:
+            service_desc = item.service if item.service else category_map.get(client.student_type, "Dance Classes")
+            item_date = item.line_date if item.line_date else inv_date
+            item_btw = round(item.amount * item.btw_rate / 100, 2)
+            item_total = round(item.amount + item_btw, 2)
+            table_data.append([
+                Paragraph(f"{service_desc}<br/><font size='8' color='#666666'>{month_name} {b.year}</font>", styles["Normal"]),
+                Paragraph(item_date.strftime("%d-%b-%Y"), styles["Normal"]),
+                Paragraph(f"€ {item.amount:.2f}", right_style),
+                Paragraph(f"€ {item_total:.2f}", right_style),
+            ])
+        # Single BTW summary row (sum of all per-item BTW amounts)
+        if btw_amt > 0:
+            # Build BTW description: group rates
+            rates_used = {}
+            for item in b.line_items:
+                r = item.btw_rate
+                rates_used[r] = rates_used.get(r, 0) + round(item.amount * r / 100, 2)
+            btw_desc = " + ".join(
+                f"BTW {r:.0f}%: € {amt:.2f}" for r, amt in rates_used.items()
+            )
+            table_data.append([
+                Paragraph(f"<font size='8' color='#666666'>{btw_desc}</font>", styles["Normal"]),
+                "", "",
+                Paragraph(f"€ {btw_amt:.2f}", right_style),
+            ])
+    else:
+        # Legacy: single amount
+        service_desc = category_map.get(client.student_type, "Dance Classes")
+        table_data.append([
             Paragraph(f"{service_desc}<br/><font size='8' color='#666666'>{month_name} {b.year}</font>", styles["Normal"]),
             Paragraph(inv_date.strftime("%d-%b-%Y"), styles["Normal"]),
             Paragraph(f"€ {b.amount:.2f}", right_style),
             Paragraph(f"€ {b.amount:.2f}", right_style),
-        ],
-    ]
-
-    if btw_amt > 0:
-        table_data.append([
-            Paragraph(f"BTW ({b.btw_rate:.0f}%)", ParagraphStyle("btw", fontSize=9, textColor=HexColor("#666666"))),
-            "",
-            "",
-            Paragraph(f"€ {btw_amt:.2f}", right_style),
         ])
+        if btw_amt > 0:
+            table_data.append([
+                Paragraph(f"BTW ({b.btw_rate:.0f}%)", ParagraphStyle("btw", fontSize=9, textColor=HexColor("#666666"))),
+                "", "",
+                Paragraph(f"€ {btw_amt:.2f}", right_style),
+            ])
 
     # Totals row
     table_data.append([
