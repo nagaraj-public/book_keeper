@@ -100,6 +100,7 @@ def clients_page():
         "all":          all_clients,
         "adults":       _filter(stype="adult"),
         "kids":         _filter(stype="child"),
+        "kids_below_6_5": _filter(stype="child_below_6_5"),
         "individual":   _filter(stype="individual"),
         "online":       _filter(stype="online"),
         "active":       _filter(status="active"),
@@ -484,6 +485,7 @@ _MONTH_NAMES = {
 _CATEGORY_MAP = {
     "adult": "Dance Classes - Adults",
     "child": "Dance Classes - Kids",
+    "child_below_6_5": "Dance Classes - Kids Below 6.5 Years",
     "individual": "Dance Classes - Individual",
     "online": "Dance Classes - Online",
 }
@@ -556,6 +558,7 @@ def billing_generate():
     fee_map = {
         "adult":      (defaults.adult_fee,      defaults.adult_btw),
         "child":      (defaults.child_fee,      defaults.child_btw),
+        "child_below_6_5": (defaults.child_below_6_5_fee, defaults.child_below_6_5_btw),
         "individual": (defaults.individual_fee, defaults.individual_btw),
         "online":     (defaults.online_fee,     defaults.online_btw),
     }
@@ -733,6 +736,8 @@ def settings_page():
         defaults.adult_btw      = float(request.form.get("adult_btw",      defaults.adult_btw))
         defaults.child_fee      = float(request.form.get("child_fee",      defaults.child_fee))
         defaults.child_btw      = float(request.form.get("child_btw",      defaults.child_btw))
+        defaults.child_below_6_5_fee = float(request.form.get("child_below_6_5_fee", defaults.child_below_6_5_fee or 45.0))
+        defaults.child_below_6_5_btw = float(request.form.get("child_below_6_5_btw", defaults.child_below_6_5_btw or 0.0))
         defaults.individual_fee = float(request.form.get("individual_fee", defaults.individual_fee))
         defaults.individual_btw = float(request.form.get("individual_btw", defaults.individual_btw))
         defaults.online_fee     = float(request.form.get("online_fee",     defaults.online_fee))

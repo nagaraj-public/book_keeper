@@ -92,6 +92,37 @@
                     </div>
                 </div>
 
+                <!-- Kids Below 6.5 Years -->
+                <div class="col-12 col-md-6">
+                    <div class="card border p-3" style="border-radius:10px;">
+                        <div class="d-flex align-items-center mb-3">
+                            <span class="badge me-2" style="background:#fde68a;color:#78350f;font-size:.85em;padding:.4em .8em;">
+                                <i class="bi bi-balloon-heart me-1"></i>Kids Below 6.5 Years
+                            </span>
+                            <span class="text-muted small">Young children's classes</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label mb-1">Monthly Fee (&euro;)</label>
+                                <input name="child_below_6_5_fee" type="number" step="0.01" min="0"
+                                       class="form-control fee-input" data-type="child_below_6_5"
+                                       value="{{ '%.2f'|format(d.child_below_6_5_fee or 45.0) }}" required>
+                            </div>
+                            <div class="col">
+                                <label class="form-label mb-1">VAT Rate (%)</label>
+                                <select name="child_below_6_5_btw" class="form-select btw-select" data-type="child_below_6_5">
+                                    <option value="21" {% if d.child_below_6_5_btw == 21 %}selected{% endif %}>21%</option>
+                                    <option value="9"  {% if d.child_below_6_5_btw == 9  %}selected{% endif %}>9%</option>
+                                    <option value="0"  {% if d.child_below_6_5_btw is none or d.child_below_6_5_btw == 0 %}selected{% endif %}>0%</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            Total incl. VAT: <strong class="total-preview" id="total-child_below_6_5">&euro;45.00</strong>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Individual -->
                 <div class="col-12 col-md-6">
                     <div class="card border p-3" style="border-radius:10px;">
@@ -329,7 +360,7 @@
         document.getElementById(`total-${type}`).textContent = '€' + total.toFixed(2);
     }
 
-    ['adult', 'child', 'individual', 'online'].forEach(type => {
+    ['adult', 'child', 'child_below_6_5', 'individual', 'online'].forEach(type => {
         document.querySelector(`.fee-input[data-type="${type}"]`).addEventListener('input', () => recalc(type));
         document.querySelector(`.btw-select[data-type="${type}"]`).addEventListener('change', () => recalc(type));
         recalc(type);

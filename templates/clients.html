@@ -50,6 +50,7 @@
                 ('all',          'All',           'bi-people-fill',      counts.all),
                 ('adults',       'Adults',        'bi-person-standing',  counts.adults),
                 ('kids',         'Kids',          'bi-star',             counts.kids),
+                ('kids_below_6_5', 'Kids <6.5',   'bi-balloon-heart',    counts.kids_below_6_5),
                 ('individual',   'Individual',    'bi-person-circle',    counts.individual),
                 ('online',       'Online',        'bi-camera-video',     counts.online),
                 ('mode_offline', 'Offline',       'bi-house',            counts.mode_offline),
@@ -107,6 +108,8 @@
                             <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.75em;"><i class="bi bi-person-standing me-1"></i>Adult</span>
                         {% elif c.student_type == 'child' %}
                             <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.75em;"><i class="bi bi-star me-1"></i>Kids</span>
+                        {% elif c.student_type == 'child_below_6_5' %}
+                            <span class="badge" style="background:#fde68a;color:#78350f;font-size:.75em;"><i class="bi bi-balloon-heart me-1"></i>Kids <6.5</span>
                         {% elif c.student_type == 'individual' %}
                             <span class="badge" style="background:#f3e8ff;color:#7c3aed;font-size:.75em;"><i class="bi bi-person-circle me-1"></i>Individual</span>
                         {% elif c.student_type == 'online' %}
@@ -158,6 +161,7 @@
                                             <select name="student_type" class="form-select">
                                                 <option value="adult"      {% if c.student_type=='adult'      %}selected{% endif %}>Adult</option>
                                                 <option value="child"      {% if c.student_type=='child'      %}selected{% endif %}>Kids</option>
+                                                <option value="child_below_6_5" {% if c.student_type=='child_below_6_5' %}selected{% endif %}>Kids Below 6.5 Years</option>
                                                 <option value="individual" {% if c.student_type=='individual' %}selected{% endif %}>Individual</option>
                                                 <option value="online"     {% if c.student_type=='online'     %}selected{% endif %}>Online</option>
                                             </select>
@@ -231,6 +235,7 @@
                             <select name="student_type" class="form-select">
                                 <option value="adult">Adult</option>
                                 <option value="child">Kids</option>
+                                <option value="child_below_6_5">Kids Below 6.5 Years</option>
                                 <option value="individual">Individual</option>
                                 <option value="online">Online</option>
                             </select>

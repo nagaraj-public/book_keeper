@@ -189,6 +189,8 @@ class FeeDefaults(db.Model):
     adult_btw = db.Column(db.Float, default=21.0)
     child_fee = db.Column(db.Float, default=45.0)
     child_btw = db.Column(db.Float, default=21.0)
+    child_below_6_5_fee = db.Column(db.Float, default=45.0)
+    child_below_6_5_btw = db.Column(db.Float, default=0.0)
     individual_fee = db.Column(db.Float, default=100.0)
     individual_btw = db.Column(db.Float, default=21.0)
     online_fee = db.Column(db.Float, default=40.0)

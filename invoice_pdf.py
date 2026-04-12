@@ -157,6 +157,7 @@ def generate_invoice_pdf(billing_entry):
     category_map = {
         "adult": "Dance Classes - Adults",
         "child": "Dance Classes - Kids",
+        "child_below_6_5": "Dance Classes - Kids Below 6.5 Years",
         "individual": "Dance Classes - Individual",
         "online": "Dance Classes - Online",
     }

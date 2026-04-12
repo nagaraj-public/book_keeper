@@ -117,6 +117,8 @@
                         <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7em;">Adult</span>
                     {% elif b.client.student_type == 'child' %}
                         <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.7em;">Kids</span>
+                    {% elif b.client.student_type == 'child_below_6_5' %}
+                        <span class="badge" style="background:#fde68a;color:#78350f;font-size:.7em;">Kids <6.5</span>
                     {% elif b.client.student_type == 'individual' %}
                         <span class="badge" style="background:#f3e8ff;color:#7c3aed;font-size:.7em;">Individual</span>
                     {% elif b.client.student_type == 'online' %}
