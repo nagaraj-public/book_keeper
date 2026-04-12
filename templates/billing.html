@@ -18,71 +18,15 @@
             </select>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#hoursInputModal">
-                <i class="bi bi-lightning-charge me-1"></i>Generate for {{ month_name }} {{ year }}
-            </button>
-        </div>
-    </div>
-    <small class="text-muted mt-2 d-block">Creates one billing entry per active student using their monthly fee. Also logs teaching hours for the month. Existing entries are skipped.</small>
-</div>
-
-<!-- Hours Input Modal (shown before generating billing) -->
-<div class="modal fade" id="hoursInputModal" tabindex="-1" aria-labelledby="hoursInputModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="hoursInputModalLabel">
-                    <i class="bi bi-clock me-2"></i>Log Teaching Hours — {{ month_name }} {{ year }}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="POST" action="{{ url_for('main.billing_generate') }}" id="generateForm">
+            <form method="POST" action="{{ url_for('main.billing_generate') }}" class="d-inline">
                 <input type="hidden" name="my" value="{{ current_my }}">
-                <div class="modal-body">
-                    <p class="text-muted small mb-3">Enter the number of classes taught this month. Hours will be calculated automatically.</p>
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Group Classes
-                                <span class="text-muted fw-normal">(× 4h each)</span>
-                            </label>
-                            <input type="number" name="group_classes" id="groupClasses"
-                                   class="form-control" min="0" value="0" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label fw-semibold">Individual Classes
-                                <span class="text-muted fw-normal">(× 3h each)</span>
-                            </label>
-                            <input type="number" name="individual_classes" id="individualClasses"
-                                   class="form-control" min="0" value="0" required>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Other Hours
-                            <span class="text-muted fw-normal">(admin, choreography, etc.)</span>
-                        </label>
-                        <input type="number" name="other_hours" id="otherHours"
-                               class="form-control" min="0" step="0.5" value="0">
-                    </div>
-                    <div class="p-3 rounded" style="background:#f0f7ff; border:1px solid #c3dafe;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-semibold text-primary"><i class="bi bi-clock me-1"></i>Total hours to log:</span>
-                            <span class="fw-bold text-primary fs-5" id="totalHoursPreview">0.0 h</span>
-                        </div>
-                        <div class="text-muted small mt-1" id="hoursBreakdown"></div>
-                    </div>
-                    <div class="form-text mt-2 text-muted">
-                        Leave all fields at 0 to generate billing without logging hours.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-lightning-charge me-1"></i>Generate Billing
-                    </button>
-                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-lightning-charge me-1"></i>Generate for {{ month_name }} {{ year }}
+                </button>
             </form>
         </div>
     </div>
+    <small class="text-muted mt-2 d-block">Creates one billing entry per active student using their monthly fee. Existing entries are skipped. Use the Planner to log teaching hours.</small>
 </div>
 
 <!-- Summary Stats -->
@@ -336,30 +280,6 @@
         amountInput.addEventListener('input', recalc);
         rateSelect.addEventListener('change', recalc);
     });
-
-    // ---- Hours input modal live preview ----
-    const groupInput      = document.getElementById('groupClasses');
-    const individualInput = document.getElementById('individualClasses');
-    const otherInput      = document.getElementById('otherHours');
-    const totalPreview    = document.getElementById('totalHoursPreview');
-    const breakdown       = document.getElementById('hoursBreakdown');
-
-    function updateHoursPreview() {
-        const g = parseInt(groupInput.value) || 0;
-        const i = parseInt(individualInput.value) || 0;
-        const o = parseFloat(otherInput.value) || 0;
-        const total = g * 4 + i * 3 + o;
-        totalPreview.textContent = total.toFixed(1) + ' h';
-        const parts = [];
-        if (g > 0) parts.push(g + ' group × 4h = ' + (g * 4).toFixed(1) + 'h');
-        if (i > 0) parts.push(i + ' individual × 3h = ' + (i * 3).toFixed(1) + 'h');
-        if (o > 0) parts.push('other = ' + o.toFixed(1) + 'h');
-        breakdown.textContent = parts.length ? parts.join(' + ') : '';
-    }
-
-    if (groupInput) {
-        [groupInput, individualInput, otherInput].forEach(el => el.addEventListener('input', updateHoursPreview));
-    }
 
     // ---- Name filter ----
     const nameFilter  = document.getElementById('nameFilter');

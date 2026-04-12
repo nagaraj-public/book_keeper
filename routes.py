@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from werkzeug.utils import secure_filename
-from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog
+from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog, ClassPlanner
 from excel_import import import_clients_from_excel
 
 bp = Blueprint("main", __name__)
@@ -49,6 +49,11 @@ def dashboard():
     total_btw_expenses = sum(e.btw_amount for e in expenses)
     profit = total_income - total_expenses
 
+    planned = ClassPlanner.query.filter(
+        db.extract("year",  ClassPlanner.date) == year,
+        db.extract("month", ClassPlanner.date) == month,
+    ).order_by(ClassPlanner.date).all()
+
     return render_template(
         "dashboard.html",
         year=year,
@@ -62,6 +67,7 @@ def dashboard():
         incomes=incomes,
         expenses=expenses,
         hours=hours,
+        planned=planned,
     )
 
 
@@ -568,47 +574,6 @@ def billing_generate():
     if skipped:
         msg += f" ({skipped} already existed)"
 
-    # ---- Log teaching hours (only if billing was created and not already logged) ----
-    if created > 0 and not MonthlyHoursLog.query.filter_by(month=month, year=year).first():
-        try:
-            group_classes      = int(request.form.get("group_classes", 0) or 0)
-            individual_classes = int(request.form.get("individual_classes", 0) or 0)
-            other_hours        = float(request.form.get("other_hours", 0) or 0)
-        except ValueError:
-            group_classes = individual_classes = 0
-            other_hours = 0.0
-
-        total_hours = group_classes * 4 + individual_classes * 3 + other_hours
-        if total_hours > 0:
-            import calendar
-            last_day = calendar.monthrange(year, month)[1]
-            entry = HourEntry(
-                client_id=None,
-                date=date(year, month, last_day),
-                hours=total_hours,
-                rate=0.0,
-                description=(
-                    f"Teaching \u2014 {_MONTH_NAMES.get(month, '')} {year} "
-                    f"({group_classes} group class{'es' if group_classes != 1 else ''}, "
-                    f"{individual_classes} individual class{'es' if individual_classes != 1 else ''}, "
-                    f"{other_hours:.1f}h other)"
-                ),
-                invoiced=True,
-            )
-            db.session.add(entry)
-            db.session.flush()
-            log = MonthlyHoursLog(
-                month=month, year=year,
-                group_classes=group_classes,
-                individual_classes=individual_classes,
-                other_hours=other_hours,
-                total_hours=total_hours,
-                hour_entry_id=entry.id,
-            )
-            db.session.add(log)
-            db.session.commit()
-            msg += f" Hours logged: {total_hours:.1f}h."
-
     flash(msg, "success")
     return redirect(url_for("main.billing_page", my=my))
 
@@ -834,3 +799,153 @@ def generate_year_report(year):
         "profit_excl": total_income_excl - total_expenses_excl,
         "total_hours": total_hours,
     }
+
+
+# --------------- Planner ---------------
+
+import calendar as _cal
+
+@bp.route("/planner")
+def planner_page():
+    today = date.today()
+    year  = request.args.get("year",  today.year,  type=int)
+    month = request.args.get("month", today.month, type=int)
+
+    # clamp
+    if month < 1:  month = 12; year -= 1
+    if month > 12: month = 1;  year += 1
+
+    # calendar grid — list of weeks, each week is list of day numbers (0 = padding)
+    cal_matrix = _cal.monthcalendar(year, month)
+
+    # all planned entries for this month
+    entries = ClassPlanner.query.filter(
+        db.extract("year",  ClassPlanner.date) == year,
+        db.extract("month", ClassPlanner.date) == month,
+    ).order_by(ClassPlanner.date).all()
+
+    # set of planned day numbers for quick JS lookup
+    planned_days = sorted({e.date.day for e in entries})
+
+    return render_template(
+        "planner.html",
+        year=year, month=month,
+        cal_matrix=cal_matrix,
+        entries=entries,
+        planned_days=planned_days,
+        today=today,
+    )
+
+
+@bp.route("/planner/add", methods=["POST"])
+def planner_add():
+    year        = int(request.form.get("year",  date.today().year))
+    month       = int(request.form.get("month", date.today().month))
+    venue       = request.form.get("venue", "Home").strip()
+    description = request.form.get("description", "").strip()
+    class_type  = request.form.get("class_type", "group")
+    dates_raw   = request.form.get("selected_dates", "")
+
+    date_strs = [d.strip() for d in dates_raw.split(",") if d.strip()]
+    if not date_strs:
+        flash("Please select at least one date.", "warning")
+        return redirect(url_for("main.planner_page", year=year, month=month))
+
+    added = 0
+    for ds in date_strs:
+        try:
+            entry_date = date.fromisoformat(ds)
+        except ValueError:
+            continue
+        entry = ClassPlanner(
+            date=entry_date,
+            venue=venue,
+            description=description or None,
+            class_type=class_type,
+        )
+        db.session.add(entry)
+        added += 1
+
+    db.session.commit()
+    flash(f"{added} class(es) planned.", "success")
+    return redirect(url_for("main.planner_page", year=year, month=month))
+
+
+@bp.route("/planner/<int:entry_id>/delete", methods=["POST"])
+def planner_delete(entry_id):
+    entry = ClassPlanner.query.get_or_404(entry_id)
+    year, month = entry.date.year, entry.date.month
+    db.session.delete(entry)
+    db.session.commit()
+    flash("Planned class removed.", "success")
+    return redirect(url_for("main.planner_page", year=year, month=month))
+
+
+@bp.route("/planner/log-hours", methods=["POST"])
+def planner_log_hours():
+    """Count planned classes for the month and create HourEntry."""
+    year  = int(request.form.get("year",  date.today().year))
+    month = int(request.form.get("month", date.today().month))
+
+    # Count classes by type
+    entries = ClassPlanner.query.filter(
+        db.extract("year",  ClassPlanner.date) == year,
+        db.extract("month", ClassPlanner.date) == month,
+    ).all()
+
+    group_count = sum(1 for e in entries if e.class_type in ["group", "other"])
+    individual_count = sum(1 for e in entries if e.class_type == "individual")
+    
+    total_hours = group_count * 4 + individual_count * 3
+
+    if total_hours == 0:
+        flash("No classes to log hours for.", "warning")
+        return redirect(url_for("main.planner_page", year=year, month=month))
+
+    # Check if MonthlyHoursLog already exists - if so, delete old entry to avoid duplicates
+    existing_log = MonthlyHoursLog.query.filter_by(month=month, year=year).first()
+    if existing_log:
+        # Delete old HourEntry
+        old_hour_entry = HourEntry.query.get(existing_log.hour_entry_id)
+        if old_hour_entry:
+            db.session.delete(old_hour_entry)
+        # Delete old log
+        db.session.delete(existing_log)
+        db.session.flush()
+
+    # Create HourEntry for last day of month
+    import calendar as cal
+    last_day = cal.monthrange(year, month)[1]
+    entry_date = date(year, month, last_day)
+
+    hour_entry = HourEntry(
+        client_id=None,
+        date=entry_date,
+        hours=total_hours,
+        rate=0,
+        invoiced=True,
+        description=f"Teaching hours for {_cal.month_name[month]} {year} "
+                    f"({group_count} group/other class{'es' if group_count != 1 else ''}, "
+                    f"{individual_count} individual class{'es' if individual_count != 1 else ''})",
+    )
+    db.session.add(hour_entry)
+    db.session.flush()
+
+    # Create new MonthlyHoursLog
+    log = MonthlyHoursLog(
+        month=month,
+        year=year,
+        group_classes=group_count,
+        individual_classes=individual_count,
+        other_hours=0,
+        total_hours=total_hours,
+        hour_entry_id=hour_entry.id,
+    )
+    db.session.add(log)
+
+    db.session.commit()
+    msg = f"Logged {total_hours}h from planner ({group_count} group/other, {individual_count} individual)."
+    if existing_log:
+        msg += " Previous log updated."
+    flash(msg, "success")
+    return redirect(url_for("main.planner_page", year=year, month=month))

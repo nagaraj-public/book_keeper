@@ -166,6 +166,20 @@ class MonthlyHoursLog(db.Model):
     hour_entry_id = db.Column(db.Integer, nullable=True)  # ref to hours.id
 
 
+class ClassPlanner(db.Model):
+    """Planned classes — one row per date per planned event."""
+    __tablename__ = "class_planner"
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    # venue options: Gymzaal hof van Monaco | Gymzaal 't Vijfspan | Online | Home
+    venue = db.Column(db.String(200), nullable=False, default="Home")
+    description = db.Column(db.Text)
+    # group | individual | other
+    class_type = db.Column(db.String(20), default="group")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 class FeeDefaults(db.Model):
     """Single-row table holding default fee + BTW per student type."""
     __tablename__ = "fee_defaults"

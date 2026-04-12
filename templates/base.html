@@ -222,6 +222,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.planner_page' %}active{% endif %}" href="{{ url_for('main.planner_page') }}">
+                    <i class="bi bi-calendar3"></i><span>Planner</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.settings_page' %}active{% endif %}" href="{{ url_for('main.settings_page') }}">
                     <i class="bi bi-gear"></i><span>Settings</span>
                 </a>
@@ -265,6 +270,9 @@
             </a>
             <a class="nav-link {% if request.endpoint == 'main.report_page' %}active{% endif %}" href="{{ url_for('main.report_page') }}">
                 <i class="bi bi-file-earmark-bar-graph"></i>Report
+            </a>
+            <a class="nav-link {% if request.endpoint == 'main.planner_page' %}active{% endif %}" href="{{ url_for('main.planner_page') }}">
+                <i class="bi bi-calendar3"></i>Planner
             </a>
             <a class="nav-link {% if request.endpoint == 'main.settings_page' %}active{% endif %}" href="{{ url_for('main.settings_page') }}">
                 <i class="bi bi-gear"></i>Settings
