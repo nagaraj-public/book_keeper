@@ -217,3 +217,39 @@ class FeeDefaults(db.Model):
             db.session.add(row)
             db.session.commit()
         return row
+
+
+class CostumeCharge(db.Model):
+    """Track costume charges per client per month."""
+    __tablename__ = "costume_charges"
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey("clients.id"), nullable=False)
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    year = db.Column(db.Integer, nullable=False)
+    charge = db.Column(db.Float, default=0.0)  # euros
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('client_id', 'month', 'year', name='unique_costume_charge'),
+    )
+
+
+class CostumePurchase(db.Model):
+    """Track annual costume purchase totals."""
+    __tablename__ = "costume_purchases"
+
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False, unique=True)
+    purchase_value = db.Column(db.Float, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @classmethod
+    def get_or_create(cls, year):
+        """Get or create purchase record for a year."""
+        row = cls.query.filter_by(year=year).first()
+        if not row:
+            row = cls(year=year, purchase_value=0.0)
+            db.session.add(row)
+            db.session.commit()
+        return row

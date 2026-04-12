@@ -230,6 +230,16 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.costumes_page' %}active{% endif %}" href="{{ url_for('main.costumes_page') }}">
+                    <i class="bi bi-stars"></i><span>Costumes</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link {% if request.endpoint == 'main.cash_page' %}active{% endif %}" href="{{ url_for('main.cash_page') }}">
+                    <i class="bi bi-cash-stack"></i><span>Cash</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link {% if request.endpoint == 'main.settings_page' %}active{% endif %}" href="{{ url_for('main.settings_page') }}">
                     <i class="bi bi-gear"></i><span>Settings</span>
                 </a>
@@ -276,6 +286,12 @@
             </a>
             <a class="nav-link {% if request.endpoint == 'main.planner_page' %}active{% endif %}" href="{{ url_for('main.planner_page') }}">
                 <i class="bi bi-calendar3"></i>Planner
+            </a>
+            <a class="nav-link {% if request.endpoint == 'main.costumes_page' %}active{% endif %}" href="{{ url_for('main.costumes_page') }}">
+                <i class="bi bi-stars"></i>Costumes
+            </a>
+            <a class="nav-link {% if request.endpoint == 'main.cash_page' %}active{% endif %}" href="{{ url_for('main.cash_page') }}">
+                <i class="bi bi-cash-stack"></i>Cash
             </a>
             <a class="nav-link {% if request.endpoint == 'main.settings_page' %}active{% endif %}" href="{{ url_for('main.settings_page') }}">
                 <i class="bi bi-gear"></i>Settings

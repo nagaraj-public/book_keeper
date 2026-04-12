@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from werkzeug.utils import secure_filename
-from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog, ClassPlanner
+from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, FeeDefaults, MonthlyHoursLog, ClassPlanner, CostumeCharge, CostumePurchase
 from excel_import import import_clients_from_excel
 
 bp = Blueprint("main", __name__)
@@ -1145,3 +1145,156 @@ def planner_generate_expenses():
         flash("No new expenses generated (all already exist for this month).", "info")
     
     return redirect(url_for("main.planner_page", year=year, month=month))
+
+
+# --------------- Costumes ---------------
+
+@bp.route("/costumes")
+def costumes_page():
+    """Display costume charges page."""
+    year = int(request.args.get("year", date.today().year))
+    
+    # Get all clients
+    clients = Client.query.filter_by(status="active").order_by(Client.name).all()
+    
+    # Get all costume charges for the year
+    charges = CostumeCharge.query.filter_by(year=year).all()
+    
+    # Organize charges by client and month
+    charges_by_client_month = {}
+    for charge in charges:
+        key = (charge.client_id, charge.month)
+        charges_by_client_month[key] = charge.charge
+    
+    # Calculate total charged
+    total_charged = sum(c.charge for c in charges)
+    
+    # Get purchase value for the year
+    purchase = CostumePurchase.get_or_create(year)
+    
+    # Calculate balance
+    balance = total_charged - purchase.purchase_value
+    
+    return render_template(
+        "costumes.html",
+        clients=clients,
+        year=year,
+        charges_by_client_month=charges_by_client_month,
+        total_charged=total_charged,
+        purchase_value=purchase.purchase_value,
+        balance=balance,
+    )
+
+
+@bp.route("/costumes/add", methods=["POST"])
+def costumes_add():
+    """Add or update a costume charge."""
+    client_id = int(request.form.get("client_id"))
+    month = int(request.form.get("month"))
+    year = int(request.form.get("year", date.today().year))
+    charge = float(request.form.get("charge", 0))
+    
+    # Validate charge amount (minimum 0)
+    charge = max(0, charge)
+    
+    # Check if charge already exists
+    existing = CostumeCharge.query.filter_by(
+        client_id=client_id, month=month, year=year
+    ).first()
+    
+    if existing:
+        existing.charge = charge
+        flash("Costume charge updated.", "success")
+    else:
+        charge_entry = CostumeCharge(
+            client_id=client_id,
+            month=month,
+            year=year,
+            charge=charge,
+        )
+        db.session.add(charge_entry)
+        flash("Costume charge added.", "success")
+    
+    db.session.commit()
+    return redirect(url_for("main.costumes_page", year=year))
+
+
+@bp.route("/costumes/purchase", methods=["POST"])
+def costumes_update_purchase():
+    """Update costume purchase value for a year."""
+    year = int(request.form.get("year", date.today().year))
+    purchase_value = float(request.form.get("purchase_value", 0))
+    
+    purchase = CostumePurchase.get_or_create(year)
+    purchase.purchase_value = max(0, purchase_value)
+    db.session.commit()
+    
+    flash("Costume purchase value updated.", "success")
+    return redirect(url_for("main.costumes_page", year=year))
+
+
+@bp.route("/costumes/delete/<int:charge_id>", methods=["POST"])
+def costumes_delete(charge_id):
+    """Delete a costume charge."""
+    charge = CostumeCharge.query.get_or_404(charge_id)
+    year = charge.year
+    db.session.delete(charge)
+    db.session.commit()
+    flash("Costume charge deleted.", "success")
+    return redirect(url_for("main.costumes_page", year=year))
+
+
+# --------------- Cash (Unpaid Tracking) ---------------
+
+@bp.route("/cash")
+def cash_page():
+    """Display unpaid billing amounts by month."""
+    year = int(request.args.get("year", date.today().year))
+    
+    # Get all unpaid billings for the year
+    unpaid_billings = MonthlyBilling.query.filter(
+        MonthlyBilling.status == "unpaid",
+        MonthlyBilling.year == year
+    ).order_by(MonthlyBilling.month, MonthlyBilling.client_id).all()
+    
+    # Organize by month
+    billings_by_month = {}
+    for billing in unpaid_billings:
+        month = billing.month
+        if month not in billings_by_month:
+            billings_by_month[month] = []
+        
+        # Calculate total including VAT
+        btw_amt = round(billing.amount * billing.btw_rate / 100, 2)
+        total = round(billing.amount + btw_amt, 2)
+        
+        billings_by_month[month].append({
+            'billing': billing,
+            'client_name': billing.client.name,
+            'btw_amount': btw_amt,
+            'total': total,
+        })
+    
+    # Calculate monthly totals and grand total
+    monthly_totals = {}
+    grand_total = 0.0
+    
+    for month in range(1, 13):
+        if month in billings_by_month:
+            month_total = sum(b['total'] for b in billings_by_month[month])
+            monthly_totals[month] = month_total
+            grand_total += month_total
+        else:
+            monthly_totals[month] = 0.0
+    
+    import calendar as _cal
+    month_names = {i: _cal.month_name[i] for i in range(1, 13)}
+    
+    return render_template(
+        "cash.html",
+        year=year,
+        billings_by_month=billings_by_month,
+        monthly_totals=monthly_totals,
+        grand_total=grand_total,
+        month_names=month_names,
+    )

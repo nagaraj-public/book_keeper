@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block title %}Costumes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="page-title"><i class="bi bi-stars me-2"></i>Costumes</h1>
+</div>
+
+<!-- Year Selector -->
+<div class="card mb-3 p-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-1 fw-semibold">Year</label>
+            <select class="form-select" id="yearSelect" onchange="location.href='/costumes?year='+this.value">
+                {% for y in range(year-2, year+2) %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-2 mb-3">
+    <div class="col-12 col-md-4">
+        <div class="card p-3 text-center">
+            <div class="fw-bold text-primary" style="font-size:1.4rem;">&euro;{{ "%.2f"|format(total_charged) }}</div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">Total Charged</div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card p-3">
+            <form method="POST" action="{{ url_for('main.costumes_update_purchase') }}" class="d-flex flex-column align-items-center">
+                <input type="hidden" name="year" value="{{ year }}">
+                <label class="form-label mb-1 small fw-semibold">Purchase Value (&euro;)</label>
+                <input name="purchase_value" type="number" step="0.01" min="0" class="form-control form-control-sm text-center mb-2" 
+                       value="{{ '%.2f'|format(purchase_value) }}" style="max-width:150px;">
+                <button type="submit" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-check-lg me-1"></i>Update
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card p-3 text-center {% if balance >= 0 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+            <div class="fw-bold {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size:1.4rem;">
+                &euro;{{ "%.2f"|format(balance) }}
+            </div>
+            <div class="text-muted" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:.5px;">
+                {% if balance >= 0 %}Surplus{% else %}Deficit{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Costume Charge -->
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-2 text-primary"></i>Add/Update Costume Charge</h5>
+        <form method="POST" action="{{ url_for('main.costumes_add') }}">
+            <input type="hidden" name="year" value="{{ year }}">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-4">
+                    <label class="form-label">Student</label>
+                    <select name="client_id" class="form-select" required>
+                        <option value="">-- Select Student --</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Month</label>
+                    <select name="month" class="form-select" required>
+                        <option value="">-- Select --</option>
+                        {% for m in range(1, 13) %}
+                        <option value="{{ m }}">{{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Charge (&euro;)</label>
+                    <input name="charge" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-lg me-1"></i>Add/Update
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Charges Table -->
+<div class="card">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3"><i class="bi bi-table me-2 text-primary"></i>Costume Charges {{ year }}</h5>
+        
+        {% set month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+        {% if clients %}
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Student</th>
+                        {% for month_name in month_names %}
+                        <th class="text-center" style="min-width:60px;">{{ month_name }}</th>
+                        {% endfor %}
+                        <th class="text-end fw-bold">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for client in clients %}
+                {% set client_total = namespace(value=0) %}
+                <tr>
+                    <td class="fw-semibold">{{ client.name }}</td>
+                    {% for m in range(1, 13) %}
+                    {% set charge = charges_by_client_month.get((client.id, m), 0) %}
+                    {% set client_total.value = client_total.value + charge %}
+                    <td class="text-center">
+                        {% if charge > 0 %}
+                        <span class="badge bg-success">&euro;{{ "%.0f"|format(charge) }}</span>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-end fw-bold">
+                        {% if client_total.value > 0 %}
+                        &euro;{{ "%.2f"|format(client_total.value) }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <th>Monthly Total</th>
+                        {% for m in range(1, 13) %}
+                        {% set month_total = namespace(value=0) %}
+                        {% for client in clients %}
+                        {% set charge = charges_by_client_month.get((client.id, m), 0) %}
+                        {% set month_total.value = month_total.value + charge %}
+                        {% endfor %}
+                        <th class="text-center">
+                            {% if month_total.value > 0 %}
+                            &euro;{{ "%.0f"|format(month_total.value) }}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </th>
+                        {% endfor %}
+                        <th class="text-end text-primary">&euro;{{ "%.2f"|format(total_charged) }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted p-5">
+            <i class="bi bi-people display-1"></i>
+            <p class="mt-3">No active students found. Add costume charges by selecting a student from the form above.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Note:</strong> Costume charges are tracked separately from your bookkeeping records. 
+    Use this page to monitor costume costs vs. charges throughout the year.
+</div>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Cash - Unpaid Tracking{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h1 class="page-title"><i class="bi bi-cash-stack me-2"></i>Cash - Unpaid Tracking</h1>
+</div>
+
+<!-- Year Selector -->
+<div class="card mb-3 p-3">
+    <div class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label mb-1 fw-semibold">Year</label>
+            <select class="form-select" id="yearSelect" onchange="location.href='/cash?year='+this.value">
+                {% for y in range(year-2, year+2) %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Total Accumulated -->
+<div class="card mb-4 text-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="card-body py-4">
+        <h3 class="text-white mb-1">Total Unpaid {{ year }}</h3>
+        <h1 class="display-3 fw-bold text-white mb-0">&euro;{{ "%.2f"|format(grand_total) }}</h1>
+        <p class="text-white-50 mb-0 mt-2">
+            <i class="bi bi-info-circle me-1"></i>Sum of all unpaid billings for the year
+        </p>
+    </div>
+</div>
+
+<!-- Monthly Overview -->
+<div class="row g-3 mb-4">
+    {% for month in range(1, 13) %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 {% if monthly_totals[month] > 0 %}border-warning{% endif %}">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge {% if monthly_totals[month] > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                        {{ month_names[month][:3] }}
+                    </span>
+                    {% if month in billings_by_month %}
+                    <span class="badge bg-primary">{{ billings_by_month[month]|length }}</span>
+                    {% endif %}
+                </div>
+                <div class="fw-bold {% if monthly_totals[month] > 0 %}text-warning{% else %}text-muted{% endif %}" style="font-size:1.2rem;">
+                    &euro;{{ "%.2f"|format(monthly_totals[month]) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Detailed Monthly Breakdown -->
+{% for month in range(1, 13) %}
+{% if month in billings_by_month %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar-month text-primary me-2"></i>
+                {{ month_names[month] }} {{ year }}
+            </h5>
+            <span class="badge bg-warning text-dark">
+                {{ billings_by_month[month]|length }} unpaid &middot; &euro;{{ "%.2f"|format(monthly_totals[month]) }}
+            </span>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Invoice #</th>
+                    <th class="text-end">Fee</th>
+                    <th class="text-end d-none d-md-table-cell">VAT ({{ billings_by_month[month][0]['billing'].btw_rate|int }}%)</th>
+                    <th class="text-end fw-bold">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for item in billings_by_month[month] %}
+                <tr>
+                    <td class="fw-semibold">{{ item.client_name }}</td>
+                    <td class="text-muted small font-monospace">{{ item.billing.invoice_number }}</td>
+                    <td class="text-end">&euro;{{ "%.2f"|format(item.billing.amount) }}</td>
+                    <td class="text-end text-muted d-none d-md-table-cell">&euro;{{ "%.2f"|format(item.btw_amount) }}</td>
+                    <td class="text-end fw-bold text-warning">&euro;{{ "%.2f"|format(item.total) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <td colspan="4" class="text-end fw-bold">{{ month_names[month] }} Total:</td>
+                    <td class="text-end fw-bold text-warning">&euro;{{ "%.2f"|format(monthly_totals[month]) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% if grand_total == 0 %}
+<div class="card p-5 text-center">
+    <i class="bi bi-check-circle-fill display-1 text-success"></i>
+    <h4 class="mt-3 text-muted">All Clear!</h4>
+    <p class="text-muted">No unpaid billings for {{ year }}. Great job keeping up with payments!</p>
+</div>
+{% endif %}
+
+<div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Note:</strong> This page tracks unpaid billing amounts from the Billing page. 
+    It's independent from your bookkeeping records and provides a quick cash flow overview.
+    Mark billings as "Paid" in the Billing page to remove them from this list.
+</div>
+{% endblock %}
