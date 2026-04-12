@@ -606,7 +606,9 @@ def billing_invoice(billing_id):
         return redirect(url_for("main.billing_page", my=f"{b.month}-{b.year}"))
     from invoice_pdf import generate_invoice_pdf
     pdf_buf = generate_invoice_pdf(b)
-    filename = f"Factuur_{b.invoice_number}_{b.client.name.replace(' ', '_')}.pdf"
+    # Sanitise filename: ASCII-safe, no special chars
+    safe_name = secure_filename(b.client.name) or "client"
+    filename = f"Factuur_{b.invoice_number}_{safe_name}.pdf"
     return send_file(pdf_buf, mimetype="application/pdf",
                      as_attachment=True, download_name=filename)
 
