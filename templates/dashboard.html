@@ -127,6 +127,22 @@
 {% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
 {% set month_short = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
 
+<!-- Charts Row -->
+<div class="row g-3 mt-3">
+    <div class="col-lg-7">
+        <div class="card p-3 h-100">
+            <h6 class="mb-3 text-muted fw-semibold"><i class="bi bi-bar-chart me-2"></i>Income vs Expenses — {{ year }}</h6>
+            <canvas id="incomeExpenseChart" height="200"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card p-3 h-100">
+            <h6 class="mb-3 text-muted fw-semibold"><i class="bi bi-people me-2"></i>Active Students by Type — {{ year }}</h6>
+            <canvas id="clientTypeChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
 <div class="card p-3 mt-3">
     <h5 class="mb-3"><i class="bi bi-bar-chart-line text-primary me-2"></i>{{ year }} — Monthly Overview</h5>
     <div class="table-responsive">
@@ -224,7 +240,15 @@
             <div class="d-flex align-items-start gap-1 mt-1 planner-dash-entry">
                 <span class="planner-type-dot" style="background:{{ venue_colors.get(e.venue, '#64748b') }};"></span>
                 <div>
-                    <div style="font-size:0.83rem;font-weight:600;">{{ e.venue }}</div>
+                    <div style="font-size:0.83rem;font-weight:600;" class="d-flex align-items-center gap-1">
+                        {{ e.venue }}
+                        {% if e.venue != 'Online' %}
+                        <a href="#" onclick="openMaps('{{ e.venue }}'); return false;"
+                           class="text-muted" title="Open in Maps" style="font-size:0.75rem;line-height:1;">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                     {% if e.description %}
                     <div style="font-size:0.75rem;color:#64748b;">{{ e.description }}</div>
                     {% endif %}
@@ -256,4 +280,153 @@
         width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
     }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openMaps(venue) {
+    const encoded = encodeURIComponent(venue + ', Netherlands');
+    const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const url = isApple
+        ? 'https://maps.apple.com/?q=' + encoded
+        : 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+    window.open(url, '_blank');
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    const labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const overview = {{ yearly_overview | tojson }};
+
+    const incomeData    = overview.map(r => +(r.income.toFixed(2)));
+    const expenseData   = overview.map(r => +(r.expenses.toFixed(2)));
+    const profitData    = overview.map(r => +(r.profit.toFixed(2)));
+    const adultsData    = overview.map(r => r.adults);
+    const kidsData      = overview.map(r => r.kids);
+    const otherData     = overview.map(r => r.other);
+
+    const countAdult    = overview.map(r => r.count_adult);
+    const countKid      = overview.map(r => r.count_child);
+    const countIndiv    = overview.map(r => r.count_individual);
+    const countOnline   = overview.map(r => r.count_online);
+    const countEvent    = overview.map(r => r.count_event);
+
+    // ---- Chart 1: Income vs Expenses ----
+    new Chart(document.getElementById('incomeExpenseChart'), {
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Income',
+                    data: incomeData,
+                    backgroundColor: 'rgba(34,197,94,0.7)',
+                    borderColor: 'rgba(34,197,94,1)',
+                    borderWidth: 1,
+                    order: 2,
+                },
+                {
+                    type: 'bar',
+                    label: 'Expenses',
+                    data: expenseData,
+                    backgroundColor: 'rgba(239,68,68,0.7)',
+                    borderColor: 'rgba(239,68,68,1)',
+                    borderWidth: 1,
+                    order: 2,
+                },
+                {
+                    type: 'line',
+                    label: 'Profit',
+                    data: profitData,
+                    borderColor: 'rgba(99,102,241,1)',
+                    backgroundColor: 'rgba(99,102,241,0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    fill: false,
+                    tension: 0.3,
+                    order: 1,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: v => '€' + v.toLocaleString(),
+                        font: { size: 11 }
+                    },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: { ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+
+    // ---- Chart 2: Active Students by Type (stacked bar) ----
+    new Chart(document.getElementById('clientTypeChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Adults',
+                    data: countAdult,
+                    backgroundColor: 'rgba(59,130,246,0.8)',
+                },
+                {
+                    label: 'Kids',
+                    data: countKid,
+                    backgroundColor: 'rgba(234,179,8,0.8)',
+                },
+                {
+                    label: 'Individual',
+                    data: countIndiv,
+                    backgroundColor: 'rgba(168,85,247,0.8)',
+                },
+                {
+                    label: 'Online',
+                    data: countOnline,
+                    backgroundColor: 'rgba(34,197,94,0.8)',
+                },
+                {
+                    label: 'Event',
+                    data: countEvent,
+                    backgroundColor: 'rgba(249,115,22,0.8)',
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}`
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true, ticks: { font: { size: 11 } } },
+                y: {
+                    stacked: true,
+                    ticks: { stepSize: 1, font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+})();
+</script>
 {% endblock %}

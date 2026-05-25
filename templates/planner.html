@@ -25,6 +25,10 @@
                 <i class="bi bi-clock-history me-1"></i>Log Hours
             </button>
         </form>
+        <a href="{{ url_for('main.planner_export_ics', year=year, month=month) }}"
+           class="btn btn-outline-secondary btn-sm" title="Export to Calendar (.ics)">
+            <i class="bi bi-calendar-check"></i>
+        </a>
         <a href="{{ url_for('main.planner_page', year=year if month > 1 else year-1, month=month-1 if month > 1 else 12) }}"
            class="btn btn-outline-secondary btn-sm"><i class="bi bi-chevron-left"></i></a>
         <span class="btn btn-sm fw-bold" style="background:#fff;border:1px solid #dee2e6;min-width:140px;text-align:center;">
@@ -142,12 +146,24 @@
                 <div class="planner-entry d-flex align-items-start gap-2 mb-1">
                     <span class="badge bg-{{ type_colors.get(e.class_type, 'secondary') }} mt-1 text-uppercase" style="font-size:0.65rem;min-width:68px;text-align:center;">{{ e.class_type }}</span>
                     <div class="flex-grow-1">
-                        <div class="fw-semibold" style="font-size:0.9rem;">{{ e.venue }}</div>
+                        <div class="fw-semibold d-flex align-items-center gap-1" style="font-size:0.9rem;">
+                            {{ e.venue }}
+                            {% if e.venue != 'Online' %}
+                            <a href="#" onclick="openMaps('{{ e.venue }}'); return false;"
+                               class="text-muted" title="Open in Maps" style="font-size:0.8rem;line-height:1;">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </a>
+                            {% endif %}
+                        </div>
                         {% if e.description %}
                         <div class="text-muted" style="font-size:0.8rem;">{{ e.description }}</div>
                         {% endif %}
                     </div>
                     <div class="d-flex gap-1">
+                        <a href="#" onclick="openGcal({{ e.id }}); return false;"
+                           class="btn btn-link text-muted p-0" style="font-size:0.85rem;" title="Add to Google Calendar">
+                            <i class="bi bi-google"></i>
+                        </a>
                         <button type="button" class="btn btn-link text-primary p-0 edit-plan-btn" style="font-size:0.85rem;" title="Edit"
                                 data-id="{{ e.id }}"
                                 data-venue="{{ e.venue }}"
@@ -223,6 +239,42 @@
 
 
 {% block scripts %}
+<script>
+// Embed entry data for Google Calendar links
+const plannerEntries = {
+    {% for e in entries %}
+    {{ e.id }}: {
+        date: '{{ e.date.strftime("%Y%m%d") }}',
+        summary: '{{ (e.class_type|capitalize + " — " + e.venue)|replace("'", "\\'") }}',
+        location: '{{ e.venue|replace("'", "\\'") }}',
+        description: '{{ (e.description or "")|replace("'", "\\'") }}'
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+function openGcal(entryId) {
+    const e = plannerEntries[entryId];
+    if (!e) return;
+    const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+    const params = new URLSearchParams({
+        text: e.summary,
+        dates: e.date + '/' + e.date,
+        location: e.location + ', Netherlands',
+        details: e.description
+    });
+    window.open(base + '&' + params.toString(), '_blank');
+}
+
+function openMaps(venue) {
+    const encoded = encodeURIComponent(venue + ', Netherlands');
+    const isApple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const url = isApple
+        ? 'https://maps.apple.com/?q=' + encoded
+        : 'https://www.google.com/maps/search/?api=1&query=' + encoded;
+    window.open(url, '_blank');
+}
+</script>
 <style>
     .planner-cal { user-select: none; }
     .cal-header {

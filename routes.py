@@ -69,10 +69,13 @@ def dashboard():
 
     all_year_incomes = Income.query.filter(db.extract("year", Income.date) == year).all()
     all_year_expenses = Expense.query.filter(db.extract("year", Expense.date) == year).all()
+    all_year_billings = MonthlyBilling.query.filter_by(year=year).all()
+
     yearly_overview = []
     for m in range(1, 13):
         m_inc = [i for i in all_year_incomes if i.date.month == m]
         m_exp = [e for e in all_year_expenses if e.date.month == m]
+        m_bills = [b for b in all_year_billings if b.month == m]
         m_income = sum(i.total for i in m_inc)
         m_expenses = sum(e.total for e in m_exp)
         m_adults = sum(i.total for i in m_inc if (i.category or "") in _ADULTS_CATS)
@@ -86,6 +89,11 @@ def dashboard():
             "adults": m_adults,
             "kids": m_kids,
             "other": m_other,
+            "count_adult":    sum(1 for b in m_bills if b.client.student_type == "adult"),
+            "count_child":    sum(1 for b in m_bills if b.client.student_type in ("child", "child_below_6_5")),
+            "count_individual": sum(1 for b in m_bills if b.client.student_type == "individual"),
+            "count_online":   sum(1 for b in m_bills if b.client.student_type == "online"),
+            "count_event":    sum(1 for b in m_bills if b.client.student_type == "event"),
         })
 
     return render_template(
@@ -546,8 +554,22 @@ def _billing_months():
 
 
 def _next_invoice_number(month, year):
-    count = MonthlyBilling.query.filter_by(month=month, year=year).count()
-    return f"NATYANJANI-{year}-{month:02d}-{count + 1:03d}"
+    prefix = f"NATYANJANI-{year}-{month:02d}-"
+    existing = (
+        MonthlyBilling.query
+        .filter(MonthlyBilling.invoice_number.like(prefix + "%"))
+        .with_entities(MonthlyBilling.invoice_number)
+        .all()
+    )
+    max_seq = 0
+    for (inv_num,) in existing:
+        try:
+            seq = int(inv_num[len(prefix):])
+            if seq > max_seq:
+                max_seq = seq
+        except (ValueError, IndexError):
+            pass
+    return f"{prefix}{max_seq + 1:03d}"
 
 
 @bp.route("/billing")
@@ -1056,6 +1078,61 @@ def planner_page():
         day_venues=day_venues,
         venue_colors=venue_colors,
         today=today,
+    )
+
+
+@bp.route("/planner/export.ics")
+def planner_export_ics():
+    year  = request.args.get("year",  date.today().year,  type=int)
+    month = request.args.get("month", date.today().month, type=int)
+
+    entries = ClassPlanner.query.filter(
+        db.extract("year",  ClassPlanner.date) == year,
+        db.extract("month", ClassPlanner.date) == month,
+    ).order_by(ClassPlanner.date).all()
+
+    from datetime import datetime as _dt
+    import uuid
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Natyanjani BookKeeper//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+    ]
+
+    for e in entries:
+        dt_str = e.date.strftime("%Y%m%d")
+        summary = e.venue
+        if e.class_type:
+            summary = f"{e.class_type.capitalize()} — {e.venue}"
+        description = e.description or ""
+        uid = str(uuid.uuid4())
+        now = _dt.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{now}",
+            f"DTSTART;VALUE=DATE:{dt_str}",
+            f"DTEND;VALUE=DATE:{dt_str}",
+            f"SUMMARY:{summary}",
+            f"LOCATION:{e.venue}",
+            f"DESCRIPTION:{description}",
+            "END:VEVENT",
+        ]
+
+    lines.append("END:VCALENDAR")
+    ics_content = "\r\n".join(lines) + "\r\n"
+
+    month_name = _MONTH_NAMES.get(month, str(month))
+    filename = f"Natyanjani_{month_name}_{year}.ics"
+
+    from flask import Response
+    return Response(
+        ics_content,
+        mimetype="text/calendar",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
 
