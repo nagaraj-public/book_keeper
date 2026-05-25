@@ -52,15 +52,170 @@
 <!-- VAT Summary (for tax filing) -->
 <div class="card p-4 mb-4">
     <h5 class="mb-3"><i class="bi bi-bank me-2"></i>VAT Summary (for Belastingdienst)</h5>
-    <div class="row">
+    <div class="row g-4">
         <div class="col-md-4">
+            <h6 class="text-muted mb-2">Annual Total</h6>
             <table class="table table-sm">
                 <tr><td class="text-muted">VAT collected (income)</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.total_btw_income) }}</td></tr>
                 <tr><td class="text-muted">VAT paid (expenses)</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.total_btw_expenses) }}</td></tr>
                 <tr class="table-warning"><td class="fw-bold">VAT to pay / reclaim</td><td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.btw_to_pay) }}</td></tr>
             </table>
         </div>
+        <div class="col-md-8">
+            <h6 class="text-muted mb-2">Quarterly BTW Breakdown</h6>
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Quarter</th>
+                        <th class="text-end">Omzet (excl.)</th>
+                        <th class="text-end">BTW ontvangen</th>
+                        <th class="text-end">BTW betaald</th>
+                        <th class="text-end fw-bold">Af te dragen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for q, qd in report.quarterly_btw.items() %}
+                <tr>
+                    <td class="fw-bold">Q{{ q }}</td>
+                    <td class="text-end">&euro; {{ "%.2f"|format(qd.income_excl) }}</td>
+                    <td class="text-end text-success">&euro; {{ "%.2f"|format(qd.btw_income) }}</td>
+                    <td class="text-end text-danger">&euro; {{ "%.2f"|format(qd.btw_expenses) }}</td>
+                    <td class="text-end fw-bold {% if qd.btw_to_pay > 0 %}text-warning{% else %}text-success{% endif %}">
+                        &euro; {{ "%.2f"|format(qd.btw_to_pay) }}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot class="table-warning">
+                    <tr class="fw-bold">
+                        <td>TOTAAL</td>
+                        <td class="text-end">&euro; {{ "%.2f"|format(report.total_income_excl) }}</td>
+                        <td class="text-end">&euro; {{ "%.2f"|format(report.total_btw_income) }}</td>
+                        <td class="text-end">&euro; {{ "%.2f"|format(report.total_btw_expenses) }}</td>
+                        <td class="text-end">&euro; {{ "%.2f"|format(report.btw_to_pay) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     </div>
+</div>
+
+<!-- Cash Flow & Bank Balance -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-cash-stack me-2"></i>Cash Flow &amp; Bank Balance</h5>
+    <div class="row g-4">
+        <!-- Opening Balance form -->
+        <div class="col-md-5">
+            <h6 class="text-muted mb-2">Opening Balance (1 jan {{ year }})</h6>
+            <form method="POST">
+                <input type="hidden" name="year" value="{{ year }}">
+                <input type="hidden" name="action" value="opening_balance">
+                <div class="input-group mb-2">
+                    <span class="input-group-text">&euro;</span>
+                    <input type="number" step="0.01" min="0" name="opening_balance"
+                           class="form-control"
+                           value="{{ '%.2f'|format(year_settings.opening_balance) }}"
+                           placeholder="0.00">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-1"></i>Opslaan
+                    </button>
+                </div>
+            </form>
+            <small class="text-muted">Voer het banksaldo in op 1 januari {{ year }}. Dit wordt gebruikt voor de eindbalans berekening.</small>
+        </div>
+        <!-- Reconciliation -->
+        <div class="col-md-7">
+            <h6 class="text-muted mb-2">Jaar-Afsluiting Overzicht</h6>
+            <table class="table table-sm">
+                <tr>
+                    <td>Openingsbalans (1 jan)</td>
+                    <td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.opening_balance) }}</td>
+                </tr>
+                <tr>
+                    <td class="text-success">+ Ontvangen omzet (incl. BTW)</td>
+                    <td class="text-end text-success">&euro; {{ "%.2f"|format(report.total_income) }}</td>
+                </tr>
+                <tr>
+                    <td class="text-danger">− Betaalde kosten (incl. BTW)</td>
+                    <td class="text-end text-danger">&euro; {{ "%.2f"|format(report.total_expenses) }}</td>
+                </tr>
+                {% set gross_flow = report.opening_balance + report.total_income - report.total_expenses %}
+                <tr class="table-light">
+                    <td class="text-muted">= Brutokashflow</td>
+                    <td class="text-end fw-bold">&euro; {{ "%.2f"|format(gross_flow) }}</td>
+                </tr>
+                <tr>
+                    <td class="text-warning">− BTW afdracht (Belastingdienst)</td>
+                    <td class="text-end text-warning">&euro; {{ "%.2f"|format(report.btw_to_pay) }}</td>
+                </tr>
+                <tr>
+                    <td class="text-danger">− Priv&eacute;onttrekkingen</td>
+                    <td class="text-end text-danger">&euro; {{ "%.2f"|format(report.total_prive) }}</td>
+                </tr>
+                <tr class="{% if report.closing_balance >= 0 %}table-success{% else %}table-danger{% endif %}">
+                    <td class="fw-bold">= Slotbalans (31 dec)</td>
+                    <td class="text-end fw-bold">&euro; {{ "%.2f"|format(report.closing_balance) }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Privéonttrekkingen -->
+<div class="card p-4 mb-4">
+    <h5 class="mb-3"><i class="bi bi-person-dash me-2"></i>Priv&eacute;onttrekkingen {{ year }}</h5>
+    <p class="text-muted small mb-3">Bedragen die u privé van de zakelijke rekening heeft opgenomen. Deze verminderen uw slotbalans maar zijn <strong>geen bedrijfskosten</strong> en hebben geen invloed op uw belastbare winst.</p>
+    <form method="POST">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="action" value="prive">
+        {% set month_names = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'] %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:120px;">Maand</th>
+                        <th style="width:160px;">Bedrag (&euro;)</th>
+                        <th>Omschrijving</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for m in range(1, 13) %}
+                {% set pd = report.prive_monthly[m] %}
+                <tr>
+                    <td class="fw-semibold">{{ month_names[m-1] }}</td>
+                    <td>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">&euro;</span>
+                            <input type="number" step="0.01" min="0"
+                                   name="prive_{{ m }}"
+                                   class="form-control"
+                                   value="{{ '%.2f'|format(pd.amount) }}"
+                                   placeholder="0.00">
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" name="prive_desc_{{ m }}"
+                               class="form-control form-control-sm"
+                               value="{{ pd.description }}"
+                               placeholder="Optionele omschrijving">
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td class="fw-bold">Totaal</td>
+                        <td class="fw-bold text-danger">&euro; {{ "%.2f"|format(report.total_prive) }}</td>
+                        <td>
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="bi bi-save me-1"></i>Opslaan
+                            </button>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </form>
 </div>
 
 <!-- Monthly Breakdown -->

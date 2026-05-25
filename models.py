@@ -271,3 +271,45 @@ class CostumePurchase(db.Model):
             db.session.add(row)
             db.session.commit()
         return row
+
+
+class YearSettings(db.Model):
+    """Per-year financial settings — opening bank balance."""
+    __tablename__ = "year_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False, unique=True)
+    opening_balance = db.Column(db.Float, default=0.0)
+
+    @classmethod
+    def get_or_create(cls, year):
+        row = cls.query.filter_by(year=year).first()
+        if not row:
+            row = cls(year=year, opening_balance=0.0)
+            db.session.add(row)
+            db.session.commit()
+        return row
+
+
+class PriveWithdrawal(db.Model):
+    """Monthly privéonttrekkingen — owner drawings from the business account."""
+    __tablename__ = "prive_withdrawals"
+
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Float, default=0.0)
+    description = db.Column(db.String(300))
+
+    __table_args__ = (
+        db.UniqueConstraint("year", "month", name="_prive_year_month_uc"),
+    )
+
+    @classmethod
+    def get_or_create(cls, year, month):
+        row = cls.query.filter_by(year=year, month=month).first()
+        if not row:
+            row = cls(year=year, month=month, amount=0.0)
+            db.session.add(row)
+            db.session.commit()
+        return row

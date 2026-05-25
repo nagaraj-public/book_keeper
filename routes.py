@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from werkzeug.utils import secure_filename
-from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, BillingLineItem, FeeDefaults, MonthlyHoursLog, ClassPlanner, CostumeCharge, CostumePurchase
+from models import db, Client, Income, Expense, HourEntry, MonthlyBilling, BillingLineItem, FeeDefaults, MonthlyHoursLog, ClassPlanner, CostumeCharge, CostumePurchase, YearSettings, PriveWithdrawal
 from excel_import import import_clients_from_excel
 
 bp = Blueprint("main", __name__)
@@ -173,10 +173,38 @@ def hours_page():
     return render_template("hours.html", hours=hours, clients=clients)
 
 
-@bp.route("/report")
+@bp.route("/report", methods=["GET", "POST"])
 def report_page():
     year = request.args.get("year", date.today().year, type=int)
-    return render_template("report.html", year=year, report=generate_year_report(year))
+    if request.method == "POST":
+        action = request.form.get("action", "opening_balance")
+        year = request.form.get("year", date.today().year, type=int)
+        if action == "opening_balance":
+            opening = request.form.get("opening_balance", "0").strip()
+            try:
+                opening_val = float(opening)
+            except ValueError:
+                opening_val = 0.0
+            ys = YearSettings.get_or_create(year)
+            ys.opening_balance = opening_val
+            db.session.commit()
+            flash(f"Opening balance for {year} saved.", "success")
+        elif action == "prive":
+            for m in range(1, 13):
+                amt_str = request.form.get(f"prive_{m}", "0").strip()
+                desc = request.form.get(f"prive_desc_{m}", "").strip()
+                try:
+                    amt = float(amt_str)
+                except ValueError:
+                    amt = 0.0
+                pw = PriveWithdrawal.get_or_create(year, m)
+                pw.amount = amt
+                pw.description = desc
+            db.session.commit()
+            flash(f"Privéonttrekkingen for {year} saved.", "success")
+        return redirect(url_for("main.report_page", year=year))
+    ys = YearSettings.get_or_create(year)
+    return render_template("report.html", year=year, report=generate_year_report(year), year_settings=ys)
 
 
 # --------------- Client CRUD ---------------
@@ -983,6 +1011,22 @@ def generate_year_report(year):
             "hour_earnings": sum(h.hours * h.rate for h in m_hours),
         }
 
+    # Quarterly BTW breakdown (Q1=1-3, Q2=4-6, Q3=7-9, Q4=10-12)
+    quarterly_btw = {}
+    for q, months in enumerate([(1,2,3),(4,5,6),(7,8,9),(10,11,12)], start=1):
+        q_btw_in  = sum(monthly[m]["btw_income"]   for m in months)
+        q_btw_exp = sum(monthly[m]["btw_expenses"] for m in months)
+        q_inc_excl = sum(monthly[m]["income_excl"] for m in months)
+        q_exp_excl = sum(monthly[m]["expenses_excl"] for m in months)
+        quarterly_btw[q] = {
+            "btw_income":   round(q_btw_in, 2),
+            "btw_expenses": round(q_btw_exp, 2),
+            "btw_to_pay":   round(q_btw_in - q_btw_exp, 2),
+            "income_excl":  round(q_inc_excl, 2),
+            "expenses_excl": round(q_exp_excl, 2),
+            "profit_excl":  round(q_inc_excl - q_exp_excl, 2),
+        }
+
     # Income by category
     income_categories = {}
     for i in incomes:
@@ -1008,10 +1052,31 @@ def generate_year_report(year):
     total_btw_income = sum(i.btw_amount for i in incomes)
     total_btw_expenses = sum(e.btw_amount for e in expenses)
     total_hours = sum(h.hours for h in hours)
+    btw_to_pay = round(total_btw_income - total_btw_expenses, 2)
+    profit_excl = round(total_income_excl - total_expenses_excl, 2)
+
+    # Privéonttrekkingen per month
+    prive_rows = PriveWithdrawal.query.filter_by(year=year).all()
+    prive_by_month = {pw.month: pw for pw in prive_rows}
+    prive_monthly = {}
+    for m in range(1, 13):
+        pw = prive_by_month.get(m)
+        prive_monthly[m] = {
+            "amount": pw.amount if pw else 0.0,
+            "description": pw.description or "" if pw else "",
+        }
+    total_prive = round(sum(p["amount"] for p in prive_monthly.values()), 2)
+
+    # Opening / closing balance
+    ys = YearSettings.get_or_create(year)
+    opening_balance = ys.opening_balance or 0.0
+    # closing = opening + net profit (excl BTW) - privéonttrekkingen
+    closing_balance = round(opening_balance + profit_excl - total_prive, 2)
 
     return {
         "year": year,
         "monthly": monthly,
+        "quarterly_btw": quarterly_btw,
         "income_categories": income_categories,
         "expense_categories": expense_categories,
         "client_income": client_income,
@@ -1019,12 +1084,16 @@ def generate_year_report(year):
         "total_income_excl": total_income_excl,
         "total_expenses": total_expenses,
         "total_expenses_excl": total_expenses_excl,
-        "total_btw_income": total_btw_income,
-        "total_btw_expenses": total_btw_expenses,
-        "btw_to_pay": total_btw_income - total_btw_expenses,
-        "profit": total_income - total_expenses,
-        "profit_excl": total_income_excl - total_expenses_excl,
+        "total_btw_income": round(total_btw_income, 2),
+        "total_btw_expenses": round(total_btw_expenses, 2),
+        "btw_to_pay": btw_to_pay,
+        "profit": round(total_income - total_expenses, 2),
+        "profit_excl": profit_excl,
         "total_hours": total_hours,
+        "opening_balance": opening_balance,
+        "closing_balance": closing_balance,
+        "prive_monthly": prive_monthly,
+        "total_prive": total_prive,
     }
 
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -15,6 +15,14 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="NATYANJANI">
 
+    <!-- Apply theme before render to avoid flash -->
+    <script>
+        (function(){
+            const t = localStorage.getItem('theme') || 'light';
+            document.getElementById('htmlRoot').setAttribute('data-bs-theme', t);
+            document.getElementById('htmlRoot').setAttribute('data-theme', t);
+        })();
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css" rel="stylesheet">
     <style>
@@ -169,6 +177,85 @@
             .bottom-nav .nav-link { font-size: 0.6rem; }
             .bottom-nav .nav-link i { font-size: 1.1rem; }
         }
+
+        /* ---- Dark Theme ---- */
+        [data-theme="dark"] body {
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .main-content {
+            background: #0f172a;
+        }
+        [data-theme="dark"] .card {
+            background: #1e293b;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+        }
+        [data-theme="dark"] .page-title { color: #e2e8f0; }
+        [data-theme="dark"] .text-muted { color: #94a3b8 !important; }
+        [data-theme="dark"] .table { color: #e2e8f0; }
+        [data-theme="dark"] .table th { color: #94a3b8; }
+        [data-theme="dark"] .table-hover > tbody > tr:hover > * { background-color: rgba(255,255,255,0.05); }
+        [data-theme="dark"] .table-light { background: #334155 !important; color: #e2e8f0; }
+        [data-theme="dark"] .table-light th, [data-theme="dark"] .table-light td { color: #e2e8f0; }
+        [data-theme="dark"] .table-active { background-color: rgba(255,107,0,0.15) !important; }
+        [data-theme="dark"] .bottom-nav {
+            background: #1e293b;
+            border-top-color: #334155;
+        }
+        [data-theme="dark"] .bottom-nav .nav-link { color: #94a3b8; }
+        [data-theme="dark"] .input-group-text {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background: #334155;
+            border-color: #475569;
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background: #3f526a;
+            border-color: var(--primary);
+            color: #e2e8f0;
+            box-shadow: 0 0 0 0.2rem rgba(255,107,0,0.25);
+        }
+        [data-theme="dark"] .form-control::placeholder { color: #64748b; }
+        [data-theme="dark"] .modal-content {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .modal-body { background: #1e293b; }
+        [data-theme="dark"] .modal-footer {
+            background: #1e293b;
+            border-top-color: #334155;
+        }
+        [data-theme="dark"] .btn-close { filter: brightness(0) invert(1); }
+        [data-theme="dark"] .border { border-color: #334155 !important; }
+        [data-theme="dark"] .border-top { border-top-color: #334155 !important; }
+        [data-theme="dark"] .border-bottom { border-bottom-color: #334155 !important; }
+        [data-theme="dark"] hr { border-color: #334155; }
+        [data-theme="dark"] .badge.bg-light { background: #334155 !important; color: #e2e8f0 !important; }
+        [data-theme="dark"] .stat-card.income .stat-value { color: #4ade80; }
+        [data-theme="dark"] .stat-card.expense .stat-value { color: #f87171; }
+        [data-theme="dark"] .stat-card.profit .stat-value { color: #60a5fa; }
+        [data-theme="dark"] .stat-card.hours .stat-value { color: #c084fc; }
+        [data-theme="dark"] .planner-dash-card { background: #273549; border-color: #334155; }
+        [data-theme="dark"] .planner-day-label { color: #94a3b8; }
+        /* Theme toggle button */
+        .theme-toggle {
+            background: none; border: none; cursor: pointer;
+            color: var(--sidebar-text); padding: 0.5rem 1.25rem;
+            font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;
+            width: 100%; text-align: left; transition: color 0.15s;
+        }
+        .theme-toggle:hover { color: #fff; }
+        .topbar-theme-btn {
+            background: none; border: none; color: #fff;
+            font-size: 1.2rem; padding: 0.4rem;
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
     </style>
 </head>
 <body>
@@ -178,7 +265,9 @@
             <i class="bi bi-list"></i>
         </button>
         <div class="brand"><img src="{{ url_for('static', filename='logo.png') }}" alt="Natyanjani Logo"></div>
-        <div style="width:40px;"></div>
+        <button class="topbar-theme-btn" onclick="toggleTheme()" id="topbarThemeBtn" aria-label="Toggle theme">
+            <i class="bi bi-moon-fill" id="topbarThemeIcon"></i>
+        </button>
     </div>
 
     <!-- Sidebar Overlay (mobile) -->
@@ -245,6 +334,12 @@
                 </a>
             </li>
         </ul>
+        <div class="px-2 pb-3 border-top" style="border-top-color:rgba(255,255,255,0.1)!important;margin-top:auto;padding-top:0.75rem;">
+            <button class="theme-toggle" onclick="toggleTheme()" id="sidebarThemeBtn">
+                <i class="bi bi-moon-fill" id="sidebarThemeIcon"></i>
+                <span id="sidebarThemeLabel">Dark Mode</span>
+            </button>
+        </div>
     </nav>
 
     <!-- Main Content -->
@@ -346,6 +441,30 @@
                 .then(reg => console.log('SW registered:', reg.scope))
                 .catch(err => console.log('SW registration failed:', err));
         }
+
+        // ---- Dark / Light theme toggle ----
+        function applyThemeUI(theme) {
+            const dark = theme === 'dark';
+            const sidebarIcon  = document.getElementById('sidebarThemeIcon');
+            const sidebarLabel = document.getElementById('sidebarThemeLabel');
+            const topbarIcon   = document.getElementById('topbarThemeIcon');
+            if (sidebarIcon)  sidebarIcon.className  = dark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+            if (sidebarLabel) sidebarLabel.textContent = dark ? 'Light Mode' : 'Dark Mode';
+            if (topbarIcon)   topbarIcon.className   = dark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
+        }
+
+        function toggleTheme() {
+            const html = document.getElementById('htmlRoot');
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-bs-theme', next);
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            applyThemeUI(next);
+        }
+
+        // Sync UI icons on load
+        applyThemeUI(localStorage.getItem('theme') || 'light');
     </script>
     {% block scripts %}{% endblock %}
 </body>
