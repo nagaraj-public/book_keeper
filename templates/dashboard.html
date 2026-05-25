@@ -123,8 +123,82 @@
 </div>
 {% endif %}
 
-<!-- Planner Widget -->
+<!-- Yearly Overview -->
 {% set month_names = ['January','February','March','April','May','June','July','August','September','October','November','December'] %}
+{% set month_short = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+
+<div class="card p-3 mt-3">
+    <h5 class="mb-3"><i class="bi bi-bar-chart-line text-primary me-2"></i>{{ year }} — Monthly Overview</h5>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Month</th>
+                    <th class="text-end">Adults</th>
+                    <th class="text-end">Kids</th>
+                    <th class="text-end">Other</th>
+                    <th class="text-end">Total Income</th>
+                    <th class="text-end">Expenses</th>
+                    <th class="text-end">Profit</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% set year_total_income = namespace(v=0) %}
+            {% set year_total_expenses = namespace(v=0) %}
+            {% set year_total_adults = namespace(v=0) %}
+            {% set year_total_kids = namespace(v=0) %}
+            {% set year_total_other = namespace(v=0) %}
+            {% for row in yearly_overview %}
+            {% set year_total_income.v = year_total_income.v + row.income %}
+            {% set year_total_expenses.v = year_total_expenses.v + row.expenses %}
+            {% set year_total_adults.v = year_total_adults.v + row.adults %}
+            {% set year_total_kids.v = year_total_kids.v + row.kids %}
+            {% set year_total_other.v = year_total_other.v + row.other %}
+            <tr {% if row.month == month %}class="table-active fw-bold"{% elif row.income == 0 and row.expenses == 0 %}class="text-muted"{% endif %}>
+                <td>
+                    <a href="{{ url_for('main.dashboard', year=year, month=row.month) }}" class="text-decoration-none {% if row.month == month %}text-primary fw-bold{% else %}text-body{% endif %}">
+                        {{ month_short[row.month - 1] }}
+                    </a>
+                </td>
+                <td class="text-end {% if row.adults > 0 %}text-success{% endif %}">
+                    {% if row.adults > 0 %}€ {{ "%.2f"|format(row.adults) }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-end {% if row.kids > 0 %}text-info{% endif %}">
+                    {% if row.kids > 0 %}€ {{ "%.2f"|format(row.kids) }}{% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                <td class="text-end text-muted small">
+                    {% if row.other > 0 %}€ {{ "%.2f"|format(row.other) }}{% else %}—{% endif %}
+                </td>
+                <td class="text-end fw-semibold {% if row.income > 0 %}text-success{% endif %}">
+                    € {{ "%.2f"|format(row.income) }}
+                </td>
+                <td class="text-end {% if row.expenses > 0 %}text-danger{% endif %}">
+                    € {{ "%.2f"|format(row.expenses) }}
+                </td>
+                <td class="text-end fw-bold {% if row.profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    € {{ "%.2f"|format(row.profit) }}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+                <tr class="fw-bold">
+                    <td>Total</td>
+                    <td class="text-end text-success">€ {{ "%.2f"|format(year_total_adults.v) }}</td>
+                    <td class="text-end text-info">€ {{ "%.2f"|format(year_total_kids.v) }}</td>
+                    <td class="text-end text-muted">€ {{ "%.2f"|format(year_total_other.v) }}</td>
+                    <td class="text-end text-success">€ {{ "%.2f"|format(year_total_income.v) }}</td>
+                    <td class="text-end text-danger">€ {{ "%.2f"|format(year_total_expenses.v) }}</td>
+                    <td class="text-end {% if year_total_income.v - year_total_expenses.v >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        € {{ "%.2f"|format(year_total_income.v - year_total_expenses.v) }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+<!-- Planner Widget -->
 
 <div class="card p-3 mt-3">
     <div class="d-flex justify-content-between align-items-center mb-3">

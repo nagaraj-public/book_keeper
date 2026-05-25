@@ -63,6 +63,31 @@ def dashboard():
         "Veenendaal Yoga": "#d946ef",         # magenta
     }
 
+    # Yearly monthly overview
+    _KIDS_CATS = {"Dance Classes - Kids", "Dance Classes - Kids Below 6.5 Years"}
+    _ADULTS_CATS = {"Dance Classes - Adults", "Dance Classes - Individual", "Dance Classes - Online"}
+
+    all_year_incomes = Income.query.filter(db.extract("year", Income.date) == year).all()
+    all_year_expenses = Expense.query.filter(db.extract("year", Expense.date) == year).all()
+    yearly_overview = []
+    for m in range(1, 13):
+        m_inc = [i for i in all_year_incomes if i.date.month == m]
+        m_exp = [e for e in all_year_expenses if e.date.month == m]
+        m_income = sum(i.total for i in m_inc)
+        m_expenses = sum(e.total for e in m_exp)
+        m_adults = sum(i.total for i in m_inc if (i.category or "") in _ADULTS_CATS)
+        m_kids = sum(i.total for i in m_inc if (i.category or "") in _KIDS_CATS)
+        m_other = round(m_income - m_adults - m_kids, 2)
+        yearly_overview.append({
+            "month": m,
+            "income": m_income,
+            "expenses": m_expenses,
+            "profit": m_income - m_expenses,
+            "adults": m_adults,
+            "kids": m_kids,
+            "other": m_other,
+        })
+
     return render_template(
         "dashboard.html",
         year=year,
@@ -78,6 +103,7 @@ def dashboard():
         hours=hours,
         planned=planned,
         venue_colors=venue_colors,
+        yearly_overview=yearly_overview,
     )
 
 
@@ -544,6 +570,7 @@ def billing_page():
     total_expected = sum(b.amount for b in billings)
     total_paid = sum(b.amount for b in billings if b.status == "paid")
     paid_count = sum(1 for b in billings if b.status == "paid")
+    all_clients = Client.query.order_by(Client.name).all()
 
     return render_template(
         "billing.html",
@@ -558,6 +585,7 @@ def billing_page():
         paid_count=paid_count,
         months=_billing_months(),
         current_my=my,
+        all_clients=all_clients,
     )
 
 
@@ -605,6 +633,97 @@ def billing_generate():
     return redirect(url_for("main.billing_page", my=my))
 
 
+@bp.route("/billing/add", methods=["POST"])
+def billing_add():
+    my = request.form.get("my", f"{date.today().month}-{date.today().year}")
+    parts = my.split("-")
+    month, year = int(parts[0]), int(parts[1])
+
+    # Resolve client — existing or create new from custom name
+    client_id = request.form.get("client_id", "").strip()
+    custom_name = request.form.get("custom_client_name", "").strip()
+
+    if client_id:
+        client = Client.query.get(int(client_id))
+        if not client:
+            flash("Selected client not found.", "danger")
+            return redirect(url_for("main.billing_page", my=my))
+    elif custom_name:
+        # Create a minimal client record for the custom name
+        client = Client(
+            name=custom_name,
+            student_type=request.form.get("student_type", "adult"),
+            status="active",
+            delivery_mode="offline",
+        )
+        db.session.add(client)
+        db.session.flush()
+    else:
+        flash("Please select a client or enter a custom name.", "danger")
+        return redirect(url_for("main.billing_page", my=my))
+
+    # Line items
+    services = request.form.getlist("service[]")
+    amounts = request.form.getlist("line_amount[]")
+    btw_rates = request.form.getlist("line_btw_rate[]")
+    line_dates = request.form.getlist("line_date[]")
+
+    total_amount = 0.0
+    default_btw = 21.0
+    line_item_objects = []
+
+    for i, amt_str in enumerate(amounts):
+        try:
+            line_amt = float(amt_str)
+        except (ValueError, TypeError):
+            continue
+        if line_amt == 0:
+            continue
+        rate = float(btw_rates[i]) if i < len(btw_rates) else 21.0
+        service = services[i].strip() if i < len(services) else ""
+        raw_date = line_dates[i] if i < len(line_dates) else ""
+        line_date_obj = None
+        if raw_date:
+            try:
+                from datetime import datetime as _dt
+                line_date_obj = _dt.strptime(raw_date, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        line_item_objects.append((service or None, line_amt, rate, line_date_obj))
+        total_amount += line_amt
+        default_btw = rate
+
+    if total_amount == 0:
+        flash("At least one fee line with a non-zero amount is required.", "danger")
+        return redirect(url_for("main.billing_page", my=my))
+
+    billing = MonthlyBilling(
+        client_id=client.id,
+        month=month,
+        year=year,
+        invoice_number=_next_invoice_number(month, year),
+        amount=total_amount,
+        btw_rate=default_btw,
+        notes=request.form.get("notes", "").strip() or None,
+    )
+    db.session.add(billing)
+    db.session.flush()
+
+    for (svc, amt, rate, ldate) in line_item_objects:
+        li = BillingLineItem(
+            billing_id=billing.id,
+            service=svc,
+            amount=amt,
+            btw_rate=rate,
+            line_date=ldate,
+        )
+        db.session.add(li)
+
+    db.session.commit()
+    flash(f"Billing entry added for {client.name}.", "success")
+    return redirect(url_for("main.billing_page", my=my))
+
+
 @bp.route("/billing/<int:billing_id>/paid", methods=["POST"])
 def billing_mark_paid(billing_id):
     b = MonthlyBilling.query.get_or_404(billing_id)
@@ -615,10 +734,12 @@ def billing_mark_paid(billing_id):
     btw_amount = round(b.amount * b.btw_rate / 100, 2)
     total = round(b.amount + btw_amount, 2)
     category = _CATEGORY_MAP.get(b.client.student_type, "Dance Classes")
+    # Use the billing month/year as the income date so it appears in the correct month
+    income_date = date(b.year, b.month, 1)
 
     income = Income(
         client_id=b.client_id,
-        date=date.today(),
+        date=income_date,
         description=f"Dance fee {_MONTH_NAMES.get(b.month, '')} {b.year}",
         amount=b.amount,
         btw_rate=b.btw_rate,
